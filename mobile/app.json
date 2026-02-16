@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Feedback Intelligence",
+    "slug": "feedback-intelligence",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "feedback-intelligence",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.feedbackintelligence.app"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
