@@ -1,0 +1,13 @@
+{
+  "name": "post-date-feedback-system",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "mobile",
+    "server"
+  ],
+  "scripts": {
+    "server": "npm run dev --workspace=server",
+    "mobile": "npm start --workspace=mobile"
+  }
+}
