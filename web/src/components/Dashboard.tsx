@@ -123,8 +123,15 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
   const stated = user?.statedPreferences;
   const revealed = user?.revealedPreferences;
 
-  const myFbMap = new Map((myFeedback || []).map(f => [f.dateId, f]));
-  const aboutMeMap = new Map((feedbackAboutMe || []).map(f => [f.dateId, f]));
+  // Build maps keeping the NEWEST feedback per dateId (results are DESC, so first entry = newest)
+  const myFbMap = new Map<string, Feedback>();
+  for (const f of myFeedback || []) {
+    if (!myFbMap.has(f.dateId)) myFbMap.set(f.dateId, f);
+  }
+  const aboutMeMap = new Map<string, Feedback>();
+  for (const f of feedbackAboutMe || []) {
+    if (!aboutMeMap.has(f.dateId)) aboutMeMap.set(f.dateId, f);
+  }
 
   // Compute session-specific stats (only from the dates the user actually rated)
   const sessionDateIds = new Set(dates.map(d => d.dateId));
