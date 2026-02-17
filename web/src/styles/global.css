@@ -45,7 +45,7 @@ button {
   font-family: inherit;
 }
 
-/* ═══ Layout ═══ */
+/* Layout */
 
 .app-container {
   max-width: 600px;
@@ -78,7 +78,7 @@ button {
   padding: 24px 20px 40px;
 }
 
-/* ═══ Typography ═══ */
+/* Typography */
 
 .heading-serif {
   font-family: var(--font-serif);
@@ -92,7 +92,7 @@ button {
   font-style: italic;
 }
 
-/* ═══ Cards ═══ */
+/* Cards */
 
 .card {
   background: var(--surface);
@@ -123,7 +123,7 @@ button {
   line-height: 1.5;
 }
 
-/* ═══ Buttons ═══ */
+/* Buttons */
 
 .btn {
   display: inline-flex;
@@ -193,7 +193,7 @@ button {
   width: 100%;
 }
 
-/* ═══ Empty / Loading ═══ */
+/* Empty / Loading */
 
 .empty-state {
   text-align: center;
@@ -227,7 +227,7 @@ button {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ═══ Progress Bar ═══ */
+/* Progress Bar */
 
 .progress-bar {
   display: flex;
@@ -253,7 +253,7 @@ button {
   background: var(--accent-light);
 }
 
-/* ═══ Preferences Screen ═══ */
+/* Preferences Screen */
 
 .prefs-screen {
   min-height: 100dvh;
@@ -295,7 +295,7 @@ button {
   margin-bottom: 24px;
 }
 
-/* ═══ Preference Sliders ═══ */
+/* Preference Sliders */
 
 .pref-row {
   margin-bottom: 20px;
@@ -328,11 +328,19 @@ button {
 
 input[type="range"] {
   -webkit-appearance: none;
+  appearance: none;
   width: 100%;
   height: 6px;
   border-radius: 3px;
   background: var(--surface-alt);
   outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-alt);
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -344,9 +352,27 @@ input[type="range"]::-webkit-slider-thumb {
   cursor: pointer;
   border: 2px solid white;
   box-shadow: 0 1px 4px rgba(44, 36, 32, 0.2);
+  margin-top: -8px;
 }
 
-/* ═══ Date Rating Flow ═══ */
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-alt);
+  border: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(44, 36, 32, 0.2);
+}
+
+/* Date Rating Flow */
 
 .rating-screen {
   min-height: 100dvh;
@@ -477,7 +503,7 @@ textarea::placeholder {
   color: var(--text-tertiary);
 }
 
-/* ═══ Reveal Screen ═══ */
+/* Reveal Screen */
 
 .reveal-screen {
   min-height: 100dvh;
@@ -493,21 +519,21 @@ textarea::placeholder {
 
 .reveal-heading {
   font-family: var(--font-serif);
-  font-size: 32px;
+  font-size: 34px;
   font-weight: 400;
   color: var(--text);
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   line-height: 1.2;
 }
 
 .reveal-sub {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-secondary);
   text-align: center;
   max-width: 380px;
   line-height: 1.6;
-  margin-bottom: 32px;
+  margin-bottom: 36px;
 }
 
 .reveal-card {
@@ -566,7 +592,7 @@ textarea::placeholder {
   transition: width 0.8s ease;
 }
 
-/* ═══ Dashboard ═══ */
+/* Dashboard */
 
 .dashboard {
   max-width: 600px;
@@ -603,10 +629,10 @@ textarea::placeholder {
   letter-spacing: 1px;
   color: var(--text-tertiary);
   margin-bottom: 12px;
-  margin-top: 8px;
+  margin-top: 24px;
 }
 
-/* ═══ Stat Row ═══ */
+/* Stat Row */
 
 .stats-row {
   display: flex;
@@ -637,7 +663,7 @@ textarea::placeholder {
   margin-top: 4px;
 }
 
-/* ═══ Dimension Bars ═══ */
+/* Dimension Bars */
 
 .dim-row {
   margin-bottom: 14px;
@@ -697,7 +723,7 @@ textarea::placeholder {
   border-radius: 50%;
 }
 
-/* ═══ Bar Charts ═══ */
+/* Bar Charts */
 
 .bar-chart {
   display: flex;
@@ -727,18 +753,30 @@ textarea::placeholder {
   margin-top: 4px;
 }
 
-/* ═══ Insight Cards ═══ */
+/* Insight Cards */
 
 .insight-card {
-  padding: 24px;
+  position: relative;
+  padding: 24px 24px 24px 28px;
   border-radius: var(--radius-lg);
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   font-size: 16px;
   line-height: 1.65;
   color: var(--text);
   background: var(--surface);
   box-shadow: var(--shadow);
-  border-left: 3px solid var(--warning);
+}
+
+.insight-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 10px;
+  border: 2.5px solid var(--warning);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
 }
 
 .insight-card strong {
@@ -758,10 +796,13 @@ textarea::placeholder {
 .insight-success {
   background: var(--surface);
   color: var(--text);
-  border-left: 3px solid var(--success);
 }
 
-/* ═══ Gap indicator ═══ */
+.insight-success::before {
+  border-color: var(--success);
+}
+
+/* Gap indicator */
 
 .gap-indicator {
   display: inline-flex;
@@ -772,7 +813,7 @@ textarea::placeholder {
   color: var(--warning);
 }
 
-/* ═══ Date Cards ═══ */
+/* Date Cards */
 
 .date-card {
   display: flex;
@@ -823,7 +864,8 @@ textarea::placeholder {
 }
 
 .date-name {
-  font-size: 15px;
+  font-family: var(--font-serif);
+  font-size: 16px;
   font-weight: 600;
   color: var(--text);
 }
@@ -832,6 +874,7 @@ textarea::placeholder {
   font-size: 12px;
   color: var(--text-tertiary);
   margin-top: 2px;
+  font-style: italic;
 }
 
 .date-badge {
@@ -856,7 +899,7 @@ textarea::placeholder {
   color: var(--danger);
 }
 
-/* ═══ Expanded Feedback Section ═══ */
+/* Expanded Feedback Section */
 
 .feedback-section {
   padding-top: 16px;
@@ -873,7 +916,7 @@ textarea::placeholder {
   font-weight: 500;
 }
 
-/* ═══ Dimension Snippets ═══ */
+/* Dimension Snippets */
 
 .dim-snippet {
   font-size: 13px;
@@ -890,9 +933,9 @@ textarea::placeholder {
 
 .feedback-highlight {
   margin-top: 12px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: var(--bg);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.5;
@@ -912,7 +955,7 @@ textarea::placeholder {
   font-weight: 500;
 }
 
-/* ═══ Collapsible ═══ */
+/* Collapsible */
 
 .collapsible-trigger {
   display: flex;
@@ -936,7 +979,7 @@ textarea::placeholder {
   transform: rotate(180deg);
 }
 
-/* ═══ Vectors Table ═══ */
+/* Vectors Table */
 
 .vectors-table {
   width: 100%;
@@ -971,7 +1014,7 @@ textarea::placeholder {
   font-weight: 600;
 }
 
-/* ═══ Responsive ═══ */
+/* Responsive */
 
 @media (max-width: 480px) {
   .prefs-heading {
@@ -991,7 +1034,7 @@ textarea::placeholder {
   }
 }
 
-/* ═══ About text ═══ */
+/* About text */
 
 .about-text {
   font-size: 14px;
@@ -999,7 +1042,7 @@ textarea::placeholder {
   line-height: 1.7;
 }
 
-/* ═══ Start over link ═══ */
+/* Start over link */
 
 .start-over {
   text-align: center;
@@ -1018,7 +1061,7 @@ textarea::placeholder {
   color: var(--text-secondary);
 }
 
-/* ═══ Mode Toggle ═══ */
+/* Mode Toggle */
 
 .mode-toggle {
   display: flex;
@@ -1045,7 +1088,7 @@ textarea::placeholder {
   box-shadow: 0 1px 4px rgba(44, 36, 32, 0.1);
 }
 
-/* ═══ Chat Conversation ═══ */
+/* Chat Conversation */
 
 .chat-container {
   width: 100%;
@@ -1152,7 +1195,7 @@ textarea::placeholder {
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
+  padding: 16px 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1170,16 +1213,17 @@ textarea::placeholder {
   align-self: flex-start;
   background: none;
   color: var(--text);
-  padding: 0;
+  padding: 2px 0;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .chat-user {
   align-self: flex-end;
-  background: var(--surface);
+  background: #f0ebe4;
   color: var(--text);
-  padding: 10px 16px;
-  border-radius: 18px;
-  box-shadow: 0 1px 4px rgba(44, 36, 32, 0.06);
+  padding: 12px 18px;
+  border-radius: 20px;
 }
 
 .chat-input-bar {
@@ -1218,7 +1262,7 @@ textarea::placeholder {
   color: var(--text-tertiary);
 }
 
-/* ═══ Mic + Send Buttons (unified) ═══ */
+/* Mic + Send Buttons (unified) */
 
 .chat-mic,
 .chat-send {
@@ -1262,7 +1306,7 @@ textarea::placeholder {
   50% { box-shadow: 0 0 0 8px rgba(184, 84, 80, 0); }
 }
 
-/* ═══ Listening Indicator ═══ */
+/* Listening Indicator */
 
 .listening-indicator {
   display: flex;
@@ -1340,7 +1384,7 @@ textarea::placeholder {
   color: var(--text-tertiary);
 }
 
-/* ═══ Tooltips ═══ */
+/* Tooltips */
 
 .tooltip-wrap {
   position: relative;
@@ -1407,7 +1451,7 @@ textarea::placeholder {
   display: block;
 }
 
-/* ═══ Top Actions (How it works + Start over) ═══ */
+/* Top Actions (How it works + Start over) */
 
 .top-actions {
   position: fixed;
@@ -1452,7 +1496,7 @@ textarea::placeholder {
   background: var(--danger-bg);
 }
 
-/* ═══ How It Works Modal ═══ */
+/* How It Works Modal */
 
 .hiw-backdrop {
   position: fixed;
@@ -1516,7 +1560,7 @@ textarea::placeholder {
   padding: 20px 24px 24px;
 }
 
-/* ═══ How It Works Content ═══ */
+/* How It Works Content */
 
 .how-it-works-content {
   margin-top: 16px;
@@ -1561,7 +1605,7 @@ textarea::placeholder {
   overflow-x: auto;
 }
 
-/* ═══ Animations ═══ */
+/* Animations */
 
 @keyframes fadeIn {
   from { opacity: 0; }

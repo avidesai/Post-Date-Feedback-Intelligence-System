@@ -19,7 +19,6 @@ export function useTTS(): UseTTSReturn {
   const cacheRef = useRef<Map<string, Blob>>(new Map());
   const pendingRef = useRef<Map<string, Promise<Blob | null>>>(new Map());
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -33,15 +32,12 @@ export function useTTS(): UseTTSReturn {
   }, []);
 
   const fetchAudio = useCallback(async (text: string): Promise<Blob | null> => {
-    // Check cache
     const cached = cacheRef.current.get(text);
     if (cached) return cached;
 
-    // Check if already fetching
     const pending = pendingRef.current.get(text);
     if (pending) return pending;
 
-    // Start fetch
     const promise = (async () => {
       try {
         const res = await fetch(`${BASE_URL}/api/tts`, {
@@ -80,13 +76,11 @@ export function useTTS(): UseTTSReturn {
   const speak = useCallback(async (text: string): Promise<void> => {
     if (!enabled) return;
 
-    // Stop any current playback
     stop();
 
     const blob = await fetchAudio(text);
     if (!blob) return;
 
-    // Revoke previous blob URL
     if (blobUrlRef.current) {
       URL.revokeObjectURL(blobUrlRef.current);
     }

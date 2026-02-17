@@ -5,7 +5,6 @@ import * as models from '../db/models';
 
 const router = Router();
 
-// POST /api/simulation/seed
 // reset and seed the database with synthetic users
 router.post('/seed', (_req, res) => {
   try {
@@ -17,7 +16,6 @@ router.post('/seed', (_req, res) => {
   }
 });
 
-// POST /api/simulation/run
 // run a full simulation (seed + multiple rounds)
 router.post('/run', (req, res) => {
   try {
@@ -39,7 +37,6 @@ router.post('/run', (req, res) => {
   }
 });
 
-// POST /api/simulation/round
 // run a single round (doesnt re-seed)
 router.post('/round', (req, res) => {
   try {
@@ -53,7 +50,6 @@ router.post('/round', (req, res) => {
   }
 });
 
-// GET /api/simulation/status
 // get current state of simulated data
 router.get('/status', (_req, res) => {
   const users = models.getAllUsers();

@@ -19,11 +19,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// init database on startup
 initDb();
 
-// auto-seed with simulation data if the database is empty
-// so the demo has data immediately when someone visits
 const users = models.getAllUsers();
 if (users.length === 0) {
   console.log('Empty database detected, running initial simulation...');
@@ -31,12 +28,10 @@ if (users.length === 0) {
   console.log(`Simulation complete: ${results.length} rounds, ${results.reduce((s, r) => s + r.pairings.length, 0)} dates`);
 }
 
-// health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// routes
 app.use('/api/users', userRoutes);
 app.use('/api/dates', dateRoutes);
 app.use('/api/feedback', feedbackRoutes);

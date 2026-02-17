@@ -1,5 +1,3 @@
-// core types for the feedback intelligence system
-// all preference vectors are 5-element arrays [conversation, emotional, interests, chemistry, values]
 
 export type PreferenceVector = [number, number, number, number, number];
 
@@ -81,7 +79,6 @@ export interface PreferenceSnapshot {
   recordedAt: string;
 }
 
-// what the LLM spits out after processing feedback text
 export interface ExtractedFeedback {
   conversationScore: number;
   emotionalScore: number;
@@ -101,7 +98,6 @@ export interface ExtractedFeedback {
   };
 }
 
-// venue info from google places
 export interface VenueContext {
   name: string;
   placeId: string;
@@ -112,7 +108,6 @@ export interface VenueContext {
   types: string[];
 }
 
-// api request/response shapes
 export interface CreateUserInput {
   name: string;
   age: number;
@@ -144,7 +139,6 @@ export interface SubmitFeedbackInput {
   rawText?: string;
 }
 
-// simulation types
 export interface SimulationConfig {
   userCount: number;
   iterationsPerRound: number;

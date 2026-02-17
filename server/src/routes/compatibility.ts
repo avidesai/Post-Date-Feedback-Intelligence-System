@@ -4,7 +4,6 @@ import { computeAndRecordCompatibility } from '../services/compatibility';
 
 const router = Router();
 
-// GET /api/compatibility/:userAId/:userBId
 // compute (and record) compatibility between two users
 router.get('/:userAId/:userBId', (req, res) => {
   const { userAId, userBId } = req.params;
@@ -25,7 +24,6 @@ router.get('/:userAId/:userBId', (req, res) => {
   res.json(result);
 });
 
-// GET /api/compatibility/:userAId/:userBId/history
 router.get('/:userAId/:userBId/history', (req, res) => {
   const { userAId, userBId } = req.params;
   const history = models.getCompatibilityHistory(userAId, userBId);

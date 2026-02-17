@@ -1,27 +1,21 @@
 import { createUser, deleteAllUsers } from './models';
 import type { CreateUserInput, PreferenceVector } from '../types';
 
-// synthetic users with intentionally varied preference patterns
-// some are self-aware (stated matches revealed), some are not (says one thing, feedback reveals another)
-// the simulation will expose these patterns over time
-
 const SEED_USERS: CreateUserInput[] = [
-  // the "says they want deep convos but actually just wants chemistry" archetype
   {
     name: 'Alex Rivera',
     age: 28,
     gender: 'male',
     bio: 'Software engineer who loves hiking and philosophy',
-    statedPreferences: [0.9, 0.8, 0.7, 0.3, 0.8], // claims conversation is king
+    statedPreferences: [0.9, 0.8, 0.7, 0.3, 0.8],
   },
   {
     name: 'Jordan Lee',
     age: 26,
     gender: 'female',
     bio: 'Freelance designer, yoga enthusiast',
-    statedPreferences: [0.7, 0.9, 0.6, 0.5, 0.8], // says emotional connection matters most
+    statedPreferences: [0.7, 0.9, 0.6, 0.5, 0.8],
   },
-  // the self-aware ones - stated prefs will roughly match their revealed over time
   {
     name: 'Sam Chen',
     age: 31,
@@ -36,13 +30,12 @@ const SEED_USERS: CreateUserInput[] = [
     bio: 'Grad student in psych, actually pretty self-aware',
     statedPreferences: [0.7, 0.7, 0.5, 0.6, 0.8],
   },
-  // the "values everything equally" people who actually have strong hidden preferences
   {
     name: 'Chris Taylor',
     age: 33,
     gender: 'male',
     bio: 'Marketing manager, says hes easy going',
-    statedPreferences: [0.5, 0.5, 0.5, 0.5, 0.5], // claims no strong preferences
+    statedPreferences: [0.5, 0.5, 0.5, 0.5, 0.5],
   },
   {
     name: 'Avery Kim',
@@ -51,7 +44,6 @@ const SEED_USERS: CreateUserInput[] = [
     bio: 'Nurse, genuinely kind, secretly picky',
     statedPreferences: [0.5, 0.6, 0.5, 0.5, 0.5],
   },
-  // the evolving ones - preferences shift significantly over dating experience
   {
     name: 'Riley Morgan',
     age: 25,
@@ -66,7 +58,6 @@ const SEED_USERS: CreateUserInput[] = [
     bio: 'Lawyer going through a growth phase',
     statedPreferences: [0.6, 0.3, 0.4, 0.8, 0.7],
   },
-  // high chemistry seekers (honest about it)
   {
     name: 'Kai Nakamura',
     age: 27,
@@ -81,7 +72,6 @@ const SEED_USERS: CreateUserInput[] = [
     bio: 'Dance instructor, vibes are everything',
     statedPreferences: [0.5, 0.6, 0.3, 0.9, 0.4],
   },
-  // the values-first crowd
   {
     name: 'Ethan Park',
     age: 35,
@@ -96,7 +86,6 @@ const SEED_USERS: CreateUserInput[] = [
     bio: 'Doctor, family oriented, traditional-ish',
     statedPreferences: [0.5, 0.6, 0.4, 0.5, 0.9],
   },
-  // the social butterflies - shared interests are their thing
   {
     name: 'Marcus Johnson',
     age: 29,
@@ -111,7 +100,6 @@ const SEED_USERS: CreateUserInput[] = [
     bio: 'Travel blogger, need someone who can keep up',
     statedPreferences: [0.6, 0.5, 0.9, 0.5, 0.4],
   },
-  // mild contradictions - small gaps between stated and true preferences
   {
     name: 'Noah White',
     age: 28,
@@ -126,7 +114,6 @@ const SEED_USERS: CreateUserInput[] = [
     bio: 'Teacher who reads too many romance novels',
     statedPreferences: [0.6, 0.8, 0.5, 0.4, 0.7],
   },
-  // the overconfident - think they know what they want, really dont
   {
     name: 'Jake Mitchell',
     age: 32,
@@ -141,7 +128,6 @@ const SEED_USERS: CreateUserInput[] = [
     bio: 'Influencer, curated life, messier than she seems',
     statedPreferences: [0.4, 0.3, 0.7, 0.9, 0.4],
   },
-  // the "I want everything" people
   {
     name: 'Liam O\'Connor',
     age: 34,
@@ -156,7 +142,6 @@ const SEED_USERS: CreateUserInput[] = [
     bio: 'Veterinarian, big heart, bigger expectations',
     statedPreferences: [0.8, 0.9, 0.8, 0.7, 0.8],
   },
-  // wildcards
   {
     name: 'Dev Agarwal',
     age: 26,
@@ -188,7 +173,6 @@ const SEED_USERS: CreateUserInput[] = [
 ];
 
 export function seedDatabase(): { usersCreated: number } {
-  // wipe everything first
   deleteAllUsers();
 
   let count = 0;

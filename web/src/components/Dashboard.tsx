@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApi } from '../hooks';
 import * as api from '../api';
-import type { Feedback, Dimension } from '../types';
+import type { Feedback, Dimension, PreferenceVector } from '../types';
 import { DIMENSIONS, DIMENSION_LABELS, DIMENSION_TIPS } from '../types';
 
 interface DateInfo {
@@ -64,8 +64,9 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
     sayDoGap = (totalGap / DIMENSIONS.length) * 10;
   }
 
-  // Insights from the divergence analysis (drift and summary return identical insights)
-  const insights = drift?.currentDivergence?.insights || [];
+  const dimensionInsights = stated && revealed
+    ? generateDimensionInsights(stated, revealed)
+    : [];
 
   return (
     <div className="dashboard">
@@ -77,7 +78,6 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
       </div>
 
       <div className="dashboard-content">
-        {/* Stats */}
         <div className="stats-row">
           <div className="stat-box">
             <div className="stat-value">{dates.length}</div>
@@ -97,7 +97,6 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
           </div>
         </div>
 
-        {/* Stated vs Revealed */}
         {stated && revealed && (
           <div className="card">
             <div className="card-title">Stated vs <em>revealed</em></div>
@@ -141,28 +140,17 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
           </div>
         )}
 
-        {/* Insights */}
-        {(insights.length > 0 || biggestGapValue > 0.1) && (
+        {dimensionInsights.length > 0 && (
           <>
             <div className="section-label">What we found</div>
-            {insights.map((insight, i) => (
-              <div
-                key={i}
-                className={`insight-card ${i === 0 ? 'insight-warning' : 'insight-info'}`}
-              >
+            {dimensionInsights.map((insight, i) => (
+              <div key={i} className="insight-card">
                 {insight}
               </div>
             ))}
-            {biggestGapDim && biggestGapValue > 0.1 && !insights.some(ins => ins.toLowerCase().includes(biggestGapDim)) && (
-              <div className="insight-card insight-info">
-                Your biggest gap is in <strong>{biggestGapDim}</strong>: a {(biggestGapValue * 10).toFixed(1)}-point
-                difference between what you said and how you actually rated.
-              </div>
-            )}
           </>
         )}
 
-        {/* Your Dates */}
         <div className="section-label">Your dates</div>
         {dates.map((date) => {
           const myFb = myFbMap.get(date.dateId);
@@ -208,7 +196,6 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
           );
         })}
 
-        {/* How it works */}
         <div className="card">
           <div className="card-title">How this <em>works</em></div>
           <div className="hiw-section">
@@ -276,7 +263,6 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
           </div>
         </div>
 
-        {/* Start over */}
         <div style={{ paddingTop: 16 }}>
           <button
             className="btn btn-outline btn-full"

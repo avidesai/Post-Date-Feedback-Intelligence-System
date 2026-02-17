@@ -4,13 +4,11 @@ import * as models from '../db/models';
 
 const router = Router();
 
-// GET /api/users
 router.get('/', (_req, res) => {
   const users = models.getAllUsers();
   res.json(users);
 });
 
-// GET /api/users/:id
 router.get('/:id', (req, res) => {
   const user = models.getUser(req.params.id);
   if (!user) {
@@ -20,7 +18,6 @@ router.get('/:id', (req, res) => {
   res.json(user);
 });
 
-// POST /api/users
 router.post('/', (req, res) => {
   const parsed = createUserSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -31,7 +28,6 @@ router.post('/', (req, res) => {
   res.status(201).json(user);
 });
 
-// PUT /api/users/:id/preferences
 router.put('/:id/preferences', (req, res) => {
   const user = models.getUser(req.params.id);
   if (!user) {

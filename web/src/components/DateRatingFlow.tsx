@@ -134,7 +134,6 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
 
   return (
     <div className="rating-screen fade-up">
-      {/* Progress */}
       <div className="rating-progress-label">
         Date {currentIndex + 1} of {dates.length}
       </div>
@@ -147,7 +146,6 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
         ))}
       </div>
 
-      {/* Person Card */}
       <div className="rating-person-card">
         <div className="rating-avatar">{date.otherName[0]}</div>
         <div className="rating-name">{date.otherName}</div>
@@ -156,7 +154,6 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
         <div className="rating-venue">{date.venue}</div>
       </div>
 
-      {/* Mode toggle */}
       <div className="mode-toggle" style={{ marginBottom: 16 }}>
         <button
           className={`mode-btn ${mode === 'chat' ? 'active' : ''}`}
@@ -191,11 +188,9 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
         </>
       ) : (
         <>
-          {/* Rating Form */}
           <div className="rating-form">
             <div className="rating-form-title">How was this date?</div>
 
-            {/* Overall */}
             <div className="rating-overall">
               <div className="pref-row">
                 <div className="pref-header">
@@ -213,7 +208,6 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
               </div>
             </div>
 
-            {/* Per-dimension scores */}
             {DIMENSIONS.map((dim, i) => (
               <div key={dim} className="pref-row">
                 <div className="pref-header">
@@ -241,7 +235,6 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
               </div>
             ))}
 
-            {/* Optional text */}
             <div className="rating-text-section">
               <div className="rating-text-label">Anything else? (optional)</div>
               <textarea

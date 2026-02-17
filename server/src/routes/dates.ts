@@ -4,13 +4,11 @@ import * as models from '../db/models';
 
 const router = Router();
 
-// GET /api/dates
 router.get('/', (_req, res) => {
   const dates = models.getAllDates();
   res.json(dates);
 });
 
-// GET /api/dates/:id
 router.get('/:id', (req, res) => {
   const dateRecord = models.getDate(req.params.id);
   if (!dateRecord) {
@@ -20,13 +18,11 @@ router.get('/:id', (req, res) => {
   res.json(dateRecord);
 });
 
-// GET /api/dates/user/:userId
 router.get('/user/:userId', (req, res) => {
   const dates = models.getDatesForUser(req.params.userId);
   res.json(dates);
 });
 
-// POST /api/dates
 router.post('/', (req, res) => {
   const parsed = createDateSchema.safeParse(req.body);
   if (!parsed.success) {

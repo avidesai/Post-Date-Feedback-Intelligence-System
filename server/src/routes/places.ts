@@ -4,7 +4,6 @@ import * as models from '../db/models';
 
 const router = Router();
 
-// POST /api/dates/:id/enrich
 // look up the venue on google places and enrich the date record
 router.post('/:id/enrich', async (req, res) => {
   try {

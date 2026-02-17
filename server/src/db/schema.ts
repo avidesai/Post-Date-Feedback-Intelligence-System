@@ -1,6 +1,3 @@
-// sqlite schema for the feedback intelligence system
-// kept simple - vectors stored as individual columns for easy querying
-
 export const SCHEMA = `
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,

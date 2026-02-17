@@ -6,25 +6,21 @@ import { updatePreferencesFromFeedback } from '../services/preference-learning';
 
 const router = Router();
 
-// GET /api/feedback/date/:dateId
 router.get('/date/:dateId', (req, res) => {
   const feedback = models.getFeedbackForDate(req.params.dateId);
   res.json(feedback);
 });
 
-// GET /api/feedback/user/:userId
 router.get('/user/:userId', (req, res) => {
   const feedback = models.getFeedbackByUser(req.params.userId);
   res.json(feedback);
 });
 
-// GET /api/feedback/about/:userId
 router.get('/about/:userId', (req, res) => {
   const feedback = models.getFeedbackAboutUser(req.params.userId);
   res.json(feedback);
 });
 
-// POST /api/feedback
 // accepts either structured scores OR raw text (or both)
 // if raw text is provided and scores are missing, we use the LLM to extract them
 router.post('/', async (req, res) => {

@@ -75,13 +75,10 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     analyserRef.current = null;
   }
 
-  // Harvest current chunks into a blob and send to Whisper
   const harvestAndTranscribe = useCallback((isFinal: boolean) => {
     if (chunksRef.current.length === 0) return;
 
     const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-    // Keep chunks for the full recording (Whisper needs the WebM header from chunk 0)
-    // But we only transcribe the full accumulated audio each time
     const segmentIndex = segmentsRef.current.length;
 
     pendingTranscriptions.current++;
@@ -111,7 +108,6 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     if (stoppingRef.current) return;
     stoppingRef.current = true;
 
-    // Clear timers
     if (chunkTimerRef.current) clearInterval(chunkTimerRef.current);
     if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
     chunkTimerRef.current = null;
@@ -122,14 +118,12 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
       recorderRef.current.stop();
     }
 
-    // Clean up audio analysis
     if (audioCtxRef.current) {
       audioCtxRef.current.close();
       audioCtxRef.current = null;
     }
     analyserRef.current = null;
 
-    // Stop mic
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
@@ -137,7 +131,6 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
 
     setIsListening(false);
 
-    // Do a final transcription with all data
     // Small delay to let the final ondataavailable fire
     setTimeout(() => {
       harvestAndTranscribe(true);
@@ -155,7 +148,6 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
       streamRef.current = stream;
       chunksRef.current = [];
 
-      // Audio analysis for silence detection
       const audioCtx = new AudioContext();
       audioCtxRef.current = audioCtx;
       const source = audioCtx.createMediaStreamSource(stream);
@@ -178,18 +170,15 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
       };
 
       recorderRef.current = recorder;
-      // Use timeslice to get data frequently
       recorder.start(500);
       setIsListening(true);
 
-      // Periodically send accumulated audio to Whisper for live transcription
       chunkTimerRef.current = setInterval(() => {
         if (chunksRef.current.length > 0 && !stoppingRef.current) {
           harvestAndTranscribe(false);
         }
       }, CHUNK_INTERVAL_MS);
 
-      // Silence detection
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       silenceTimerRef.current = setInterval(() => {
         if (!analyserRef.current) return;

@@ -4,7 +4,6 @@ import * as models from '../db/models';
 
 const router = Router();
 
-// GET /api/insights/:userId/preference-drift
 router.get('/:userId/preference-drift', (req, res) => {
   const drift = getPreferenceDrift(req.params.userId);
   if (!drift) {
@@ -14,7 +13,6 @@ router.get('/:userId/preference-drift', (req, res) => {
   res.json(drift);
 });
 
-// GET /api/insights/:userId/summary
 // high-level summary of what we know about this users dating patterns
 router.get('/:userId/summary', (req, res) => {
   const user = models.getUser(req.params.userId);

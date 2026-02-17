@@ -40,20 +40,21 @@ function saveSession(step: Step, session: DemoSession | null) {
   localStorage.setItem('demo_session', JSON.stringify({ step, session }));
 }
 
-/** Try to find a user with at least 3 dates with women (or 3 dates as fallback). */
 async function findUserWithDates(users: User[]): Promise<{ user: User; dates: DateInfo[] } | null> {
   const userMap = new Map(users.map(u => [u.id, u]));
   const shuffled = [...users].sort(() => Math.random() - 0.5);
 
-  // First pass: prefer users with 3+ dates with women
   for (const candidate of shuffled) {
     const dates: DateRecord[] = await api.getDatesForUser(candidate.id);
     const withWomen: DateInfo[] = [];
 
+    const seenOtherIds = new Set<string>();
     for (const d of dates) {
       const otherId = d.userAId === candidate.id ? d.userBId : d.userAId;
+      if (seenOtherIds.has(otherId)) continue;
       const other = userMap.get(otherId);
       if (other && other.gender?.toLowerCase() === 'female') {
+        seenOtherIds.add(otherId);
         withWomen.push({
           dateId: d.id,
           otherUserId: otherId,
@@ -72,14 +73,17 @@ async function findUserWithDates(users: User[]): Promise<{ user: User; dates: Da
     }
   }
 
-  // Fallback: any user with 2+ dates
   for (const candidate of shuffled) {
     const dates: DateRecord[] = await api.getDatesForUser(candidate.id);
     if (dates.length >= 2) {
-      const picked = dates.slice(0, 2).map(d => {
+      const picked: DateInfo[] = [];
+      const seenIds = new Set<string>();
+      for (const d of dates) {
         const otherId = d.userAId === candidate.id ? d.userBId : d.userAId;
+        if (seenIds.has(otherId)) continue;
+        seenIds.add(otherId);
         const other = userMap.get(otherId);
-        return {
+        picked.push({
           dateId: d.id,
           otherUserId: otherId,
           otherName: other?.name || 'Someone',
@@ -87,9 +91,12 @@ async function findUserWithDates(users: User[]): Promise<{ user: User; dates: Da
           otherBio: other?.bio || '',
           venue: d.venueName || 'Coffee date',
           dateAt: d.dateAt,
-        };
-      });
-      return { user: candidate, dates: picked };
+        });
+        if (picked.length >= 2) break;
+      }
+      if (picked.length >= 2) {
+        return { user: candidate, dates: picked };
+      }
     }
   }
 
@@ -115,20 +122,16 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      // Fetch all users
       let users: User[] = await api.getUsers();
 
-      // If no users exist, seed the simulation
       if (users.length === 0) {
         await api.seedSimulation();
         await api.runSimulation({ rounds: 3 });
         users = await api.getUsers();
       }
 
-      // Try to find a suitable user
       let result = await findUserWithDates(users);
 
-      // If no suitable user found, reseed and retry
       if (!result) {
         await api.seedSimulation();
         await api.runSimulation({ rounds: 3 });
@@ -141,7 +144,6 @@ export default function App() {
         return;
       }
 
-      // Update stated preferences to what the user selected
       await api.updatePreferences(result.user.id, prefs);
 
       const newSession: DemoSession = {

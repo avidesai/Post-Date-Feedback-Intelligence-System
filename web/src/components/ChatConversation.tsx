@@ -25,7 +25,6 @@ export default function ChatConversation({ questions, onComplete, processing, pr
   const transcriptRef = useRef<{ question: string; answer: string }[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  // Track whether user is using keyboard so we don't fight with mic
   const userIsTyping = useRef(false);
 
   const speech = useSpeechRecognition();
@@ -37,7 +36,6 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     }
   }, []);
 
-  // Prefetch first question's audio on mount, then show and speak it
   useEffect(() => {
     tts.prefetch(questions[0]);
     setTyping(true);
@@ -50,12 +48,10 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questions]);
 
-  // Scroll on new messages or speech transcript changes
   useEffect(() => {
     scrollToBottom();
-  }, [messages, typing, speech.transcript, speech.isTranscribing, scrollToBottom]);
+  }, [messages, typing, speech.transcript, speech.isListening, speech.isTranscribing, scrollToBottom]);
 
-  // Auto-start mic when AI finishes speaking (only if user isn't typing)
   useEffect(() => {
     if (!aiSpeaking && !typing && !done && !speech.isListening && !speech.isTranscribing && !userIsTyping.current) {
       const t = setTimeout(() => {
@@ -68,14 +64,12 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiSpeaking, typing, done]);
 
-  // Sync speech transcript into input field
   useEffect(() => {
     if (speech.transcript) {
       setInput(speech.transcript);
     }
   }, [speech.transcript]);
 
-  // Auto-send after voice transcription completes
   const pendingAutoSend = useRef(false);
   useEffect(() => {
     if (!speech.isListening && speech.isTranscribing) {
@@ -100,25 +94,21 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     const text = input.trim();
     if (!text || typing || done) return;
 
-    // Stop AI voice if still speaking
     if (aiSpeaking) {
       tts.stop();
       setAiSpeaking(false);
     }
 
-    // Stop listening if active
     if (speech.isListening) {
       speech.stop();
     }
 
-    // Add user message
     const userMsg: Message = { role: 'user', text };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     speech.reset();
     pendingAutoSend.current = false;
 
-    // Record in transcript
     transcriptRef.current.push({
       question: questions[currentQ],
       answer: text,
@@ -131,7 +121,6 @@ export default function ChatConversation({ questions, onComplete, processing, pr
       onComplete(transcriptRef.current);
     } else {
       tts.prefetch(questions[nextQ]);
-      // Reset typing flag for the next question
       userIsTyping.current = false;
 
       setTyping(true);
@@ -187,7 +176,6 @@ export default function ChatConversation({ questions, onComplete, processing, pr
 
   return (
     <div className="chat-container">
-      {/* Voice orb + mute toggle */}
       <div className="chat-voice-header">
         <VoiceOrb active={aiSpeaking} />
         <button

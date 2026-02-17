@@ -4,7 +4,6 @@ import { extractPreferencesFromChat } from '../services/llm';
 
 const router = Router();
 
-// POST /api/extract/preferences
 // Takes a chat transcript and extracts a preference vector using LLM
 router.post('/preferences', async (req, res) => {
   try {

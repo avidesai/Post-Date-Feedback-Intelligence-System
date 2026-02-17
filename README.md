@@ -77,38 +77,38 @@ The OpenAI key is needed for the LLM extraction pipeline, voice transcription (W
 ## Project structure
 
 ```
-web/                             # React + Vite frontend
+web/
   src/
     components/
-      PreferencesScreen.tsx      # Stated preference collection (chat or sliders)
-      DateRatingFlow.tsx         # Steps through each date rating
-      ChatConversation.tsx       # Conversational UI with voice input + TTS
-      RevealScreen.tsx           # Animated stated vs revealed comparison
-      Dashboard.tsx              # Full results with insights and date details
-      VoiceOrb.tsx               # Visual animation for AI speaking state
+      PreferencesScreen.tsx
+      DateRatingFlow.tsx
+      ChatConversation.tsx       # voice + text chat UI
+      RevealScreen.tsx
+      Dashboard.tsx
+      VoiceOrb.tsx
     hooks/
-      useSpeechRecognition.ts    # MediaRecorder + Whisper transcription (works in all browsers)
-      useTTS.ts                  # OpenAI TTS with prefetching and caching
-    data/questions.ts            # Question sets for preferences + date recaps
-    api.ts                       # Typed API client
-    types.ts                     # Shared types
-
-server/                          # Express + TypeScript backend
-  src/
-    db/                          # SQLite schema, models, seed data
-    routes/
-      feedback.ts                # Feedback submission + LLM extraction
-      tts.ts                     # TTS generation + Whisper transcription endpoints
-      extract.ts                 # Preference extraction from chat transcripts
-    services/
-      llm.ts                     # OpenAI structured extraction (feedback + preferences)
-      preference-learning.ts     # EMA-based revealed preference updates
-      compatibility.ts           # Two-sided compatibility scoring
-      divergence.ts              # Stated vs revealed detection + insights
-      simulation.ts              # Synthetic data generation + sim engine
-      vector-math.ts             # Cosine similarity, dot product, EMA, etc
+      useSpeechRecognition.ts    # MediaRecorder + Whisper (cross-browser)
+      useTTS.ts                  # TTS with prefetching
+    data/questions.ts
+    api.ts
     types.ts
-    schemas.ts                   # Zod schemas (shared between validation + LLM output format)
+
+server/
+  src/
+    db/
+    routes/
+      feedback.ts
+      tts.ts                     # TTS + Whisper transcription
+      extract.ts                 # preference extraction from chat
+    services/
+      llm.ts                     # GPT-4o-mini structured extraction
+      preference-learning.ts     # EMA-based revealed preference updates
+      compatibility.ts
+      divergence.ts              # stated vs revealed gap detection
+      simulation.ts
+      vector-math.ts
+    types.ts
+    schemas.ts
 ```
 
 ## API endpoints

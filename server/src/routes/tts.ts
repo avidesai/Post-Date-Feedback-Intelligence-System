@@ -14,7 +14,6 @@ function getClient(): OpenAI {
   return client;
 }
 
-// POST /api/tts
 // Takes text, returns audio as mp3 binary
 router.post('/', async (req, res) => {
   try {
@@ -51,7 +50,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// POST /api/tts/transcribe
 // Takes audio file, returns text via Whisper
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 

@@ -13,7 +13,6 @@ import type {
   Dimension,
 } from '../types';
 
-// helper to convert db row to User type
 function rowToUser(row: any): User {
   return {
     id: row.id,
@@ -110,7 +109,6 @@ function rowToPreferenceSnapshot(row: any): PreferenceSnapshot {
   };
 }
 
-// --- User CRUD ---
 
 export function createUser(input: CreateUserInput): User {
   const db = getDb();
@@ -180,7 +178,6 @@ export function deleteAllUsers(): void {
   db.prepare('DELETE FROM users').run();
 }
 
-// --- Date CRUD ---
 
 export function createDate(input: CreateDateInput): DateRecord {
   const db = getDb();
@@ -227,7 +224,6 @@ export function updateDateVenue(
   `).run(placeId, noiseLevel, priceLevel, ambiance, id);
 }
 
-// --- Feedback CRUD ---
 
 export function createFeedback(input: SubmitFeedbackInput & {
   overallRating: number;
@@ -285,7 +281,6 @@ export function getFeedbackAboutUser(userId: string): Feedback[] {
   ).all(userId).map(rowToFeedback);
 }
 
-// --- Compatibility Scores ---
 
 export function recordCompatibilityScore(
   userAId: string,
@@ -332,7 +327,6 @@ export function getLatestCompatibility(userAId: string, userBId: string): Compat
   return row ? rowToCompatibilityScore(row) : null;
 }
 
-// --- Preference History ---
 
 export function recordPreferenceSnapshot(
   userId: string,

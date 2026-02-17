@@ -6,62 +6,34 @@ import { computeCompatibility, computeAndRecordCompatibility } from './compatibi
 import { updatePreferencesFromFeedback } from './preference-learning';
 import { clamp, cosineDistance } from './vector-math';
 
-// "true" revealed preferences for simulation users
-// these are what the simulation uses to generate feedback scores
-// they intentionally differ from stated preferences for interesting users
+// true preferences intentionally differ from stated for interesting users
 const TRUE_PREFERENCES: Record<string, PreferenceVector> = {
-  // Alex says he wants conversation but actually cares most about chemistry
   'Alex Rivera': [0.4, 0.5, 0.6, 0.85, 0.5],
-  // Jordan says emotional connection but actually wants shared interests + chemistry
   'Jordan Lee': [0.5, 0.5, 0.8, 0.7, 0.4],
-  // Sam is self-aware, true prefs match stated
   'Sam Chen': [0.6, 0.5, 0.75, 0.65, 0.55],
-  // Maya is also self-aware
   'Maya Patel': [0.65, 0.7, 0.5, 0.55, 0.75],
-  // Chris says "no preference" but actually cares deeply about values and emotional
   'Chris Taylor': [0.3, 0.8, 0.3, 0.4, 0.85],
-  // Avery is secretly very chemistry-focused
   'Avery Kim': [0.4, 0.5, 0.3, 0.85, 0.4],
-  // Riley's prefs will evolve (start here, shift during sim)
   'Riley Morgan': [0.5, 0.7, 0.6, 0.5, 0.6],
-  // Casey too
   'Casey Brooks': [0.5, 0.6, 0.5, 0.5, 0.8],
-  // Kai is honest about wanting chemistry
   'Kai Nakamura': [0.35, 0.45, 0.35, 0.9, 0.3],
-  // Zoe too
   'Zoe Williams': [0.45, 0.55, 0.3, 0.85, 0.35],
-  // Ethan really is values-first
   'Ethan Park': [0.55, 0.65, 0.45, 0.35, 0.9],
-  // Priya is pretty aligned
   'Priya Sharma': [0.5, 0.55, 0.35, 0.45, 0.85],
-  // Marcus does care about shared interests
   'Marcus Johnson': [0.5, 0.35, 0.85, 0.55, 0.45],
-  // Luna too
   'Luna Garcia': [0.55, 0.45, 0.85, 0.5, 0.35],
-  // Noah actually cares more about chemistry than he admits
   'Noah White': [0.55, 0.45, 0.5, 0.75, 0.5],
-  // Isla actually needs chemistry more than emotional
   'Isla Thompson': [0.5, 0.55, 0.4, 0.7, 0.55],
-  // Jake thinks interests+chemistry but actually needs emotional+values
   'Jake Mitchell': [0.4, 0.7, 0.4, 0.5, 0.7],
-  // Sophia similar disconnect
   'Sophia Davis': [0.5, 0.7, 0.3, 0.5, 0.7],
-  // Liam wants everything but actually has clear favorites
   "Liam O'Connor": [0.7, 0.5, 0.6, 0.8, 0.6],
-  // Emma is more chemistry-driven than she thinks
   'Emma Rodriguez': [0.6, 0.6, 0.5, 0.8, 0.6],
-  // Dev pretends not to want connection but he does
   'Dev Agarwal': [0.6, 0.65, 0.5, 0.5, 0.55],
-  // Mia is actually pretty accurate
   'Mia Zhang': [0.7, 0.55, 0.55, 0.5, 0.65],
-  // Tyler is young and all over the place
   'Tyler Green': [0.6, 0.5, 0.5, 0.6, 0.5],
-  // Nadia values conversation for real
   'Nadia Hassan': [0.85, 0.6, 0.5, 0.45, 0.65],
 };
 
-// simulate what scores user A would give user B based on A's true preferences
-// and B's quality profile, with some noise
 function simulateFeedbackScores(
   userA: User,
   userB: User,
@@ -69,7 +41,6 @@ function simulateFeedbackScores(
 ): { scores: PreferenceVector; overall: number } {
   const qualityB = userB.qualityProfile;
 
-  // each dimension score is based on B's quality with some noise
   const noise = () => (Math.random() - 0.5) * 0.15;
   const scores: PreferenceVector = [
     clamp(qualityB[0] + noise(), 0, 1),
@@ -79,7 +50,7 @@ function simulateFeedbackScores(
     clamp(qualityB[4] + noise(), 0, 1),
   ];
 
-  // overall rating is weighted by true preferences (what actually makes this person happy)
+  // overall weighted by true preferences
   let weightedSum = 0;
   let totalWeight = 0;
   for (let i = 0; i < 5; i++) {
@@ -91,16 +62,10 @@ function simulateFeedbackScores(
   return { scores, overall };
 }
 
-// seed the simulation with fresh users
 export function seedSimulation(): { usersCreated: number } {
   return seedDatabase();
 }
 
-// run one round of the simulation:
-// 1. pair up users (could be random or compatibility-based)
-// 2. generate feedback for each pair
-// 3. update preference vectors
-// 4. compute compatibility scores
 export function runSimulationRound(
   round: number,
   useCompatibilityPairing: boolean = false
@@ -116,24 +81,16 @@ export function runSimulationRound(
     };
   }
 
-  let pairs: Array<[User, User]>;
-
-  if (useCompatibilityPairing && round > 0) {
-    // after round 0, use compatibility scores to make better pairings
-    pairs = createCompatibilityPairings(users);
-  } else {
-    // round 0: random pairings
-    pairs = createRandomPairings(users);
-  }
+  const pairs = useCompatibilityPairing && round > 0
+    ? createCompatibilityPairings(users)
+    : createRandomPairings(users);
 
   const pairingResults: Array<{ userAId: string; userBId: string; score: number }> = [];
 
   for (const [userA, userB] of pairs) {
-    // get true preferences for simulation
     const truePrefsA = TRUE_PREFERENCES[userA.name] || userA.statedPreferences;
     const truePrefsB = TRUE_PREFERENCES[userB.name] || userB.statedPreferences;
 
-    // create the date record
     const dateRecord = models.createDate({
       userAId: userA.id,
       userBId: userB.id,
@@ -141,7 +98,6 @@ export function runSimulationRound(
       dateAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
     });
 
-    // simulate A's feedback about B
     const feedbackAB = simulateFeedbackScores(userA, userB, truePrefsA);
 
     const fbA = models.createFeedback({
@@ -156,12 +112,10 @@ export function runSimulationRound(
       valuesScore: feedbackAB.scores[4],
     });
 
-    // refresh user objects from db before updating
     const freshA = models.getUser(userA.id)!;
     const freshB = models.getUser(userB.id)!;
     updatePreferencesFromFeedback(fbA, freshA, freshB);
 
-    // simulate B's feedback about A
     const feedbackBA = simulateFeedbackScores(userB, userA, truePrefsB);
 
     const fbB = models.createFeedback({
@@ -180,7 +134,6 @@ export function runSimulationRound(
     const freshA2 = models.getUser(userA.id)!;
     updatePreferencesFromFeedback(fbB, freshB2, freshA2);
 
-    // compute and record compatibility
     const compat = computeAndRecordCompatibility(userA.id, userB.id);
     if (compat) {
       pairingResults.push({
@@ -191,12 +144,10 @@ export function runSimulationRound(
     }
   }
 
-  // compute round-level metrics
   const avgCompat = pairingResults.length > 0
     ? pairingResults.reduce((sum, p) => sum + p.score, 0) / pairingResults.length
     : 0;
 
-  // compute average divergence across all users
   const allUsers = models.getAllUsers();
   let totalDivergence = 0;
   for (const user of allUsers) {
@@ -208,27 +159,21 @@ export function runSimulationRound(
     round,
     averageCompatibility: avgCompat,
     averageDivergence: avgDivergence,
-    matchQualityImprovement: 0, // calculated after all rounds by comparing to round 0
+    matchQualityImprovement: 0,
     pairings: pairingResults,
   };
 }
 
-// run the full simulation: seed + multiple rounds
 export function runFullSimulation(config: SimulationConfig): SimulationResult[] {
-  // seed fresh data
   seedSimulation();
 
   const results: SimulationResult[] = [];
 
   for (let round = 0; round < config.rounds; round++) {
-    const result = runSimulationRound(
-      round,
-      round > 0 // use compatibility pairing after first round
-    );
+    const result = runSimulationRound(round, round > 0);
     results.push(result);
   }
 
-  // calculate improvement relative to round 0
   if (results.length > 1) {
     const baselineCompat = results[0].averageCompatibility;
     for (const r of results) {
@@ -252,9 +197,8 @@ function createRandomPairings(users: User[]): Array<[User, User]> {
   return pairs;
 }
 
+// greedy pairing, not optimal but good enough
 function createCompatibilityPairings(users: User[]): Array<[User, User]> {
-  // greedy compatibility-based pairing
-  // not optimal but good enough for a demo
   const available = new Set(users.map(u => u.id));
   const pairs: Array<[User, User]> = [];
   const userMap = new Map(users.map(u => [u.id, u]));
@@ -265,8 +209,6 @@ function createCompatibilityPairings(users: User[]): Array<[User, User]> {
 
     const ids = Array.from(available);
 
-    // find the best pair among available users
-    // limit comparisons to keep it reasonable
     for (let i = 0; i < Math.min(ids.length, 20); i++) {
       for (let j = i + 1; j < Math.min(ids.length, 20); j++) {
         const userA = userMap.get(ids[i])!;
@@ -291,7 +233,6 @@ function createCompatibilityPairings(users: User[]): Array<[User, User]> {
   return pairs;
 }
 
-// some random venue names for simulation dates
 function getRandomVenue(): string {
   const venues = [
     'The Blue Door Cafe',
