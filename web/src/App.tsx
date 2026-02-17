@@ -167,6 +167,11 @@ export default function App() {
   };
 
   const handleStartOver = () => {
+    if (!window.confirm('Start over? Your current progress will be lost.')) return;
+    // Clear all saved state
+    if (session?.userId) {
+      localStorage.removeItem(`rating_progress_${session.userId}`);
+    }
     localStorage.removeItem('demo_session');
     setSession(null);
     setStep('preferences');
@@ -214,9 +219,16 @@ export default function App() {
 
   return (
     <>
-      <button className="hiw-trigger" onClick={() => setHiwOpen(true)}>
-        How it works
-      </button>
+      <div className="top-actions">
+        {step !== 'preferences' && (
+          <button className="start-over-trigger" onClick={handleStartOver}>
+            Start over
+          </button>
+        )}
+        <button className="hiw-trigger" onClick={() => setHiwOpen(true)}>
+          How it works
+        </button>
+      </div>
       <HowItWorksModal open={hiwOpen} onClose={() => setHiwOpen(false)} />
       {content}
     </>
