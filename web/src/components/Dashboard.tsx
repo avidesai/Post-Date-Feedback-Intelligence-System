@@ -21,8 +21,8 @@ interface Props {
 }
 
 export default function Dashboard({ userId, dates, onStartOver }: Props) {
-  const { data: user, refetch: refetchUser } = useApi(() => api.getUser(userId), [userId]);
-  const { data: drift, refetch: refetchDrift } = useApi(
+  const { data: user } = useApi(() => api.getUser(userId), [userId]);
+  const { data: drift } = useApi(
     () => api.getPreferenceDrift(userId), [userId]
   );
   const { data: myFeedback } = useApi(
@@ -32,20 +32,8 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
     () => api.getFeedbackAboutUser(userId), [userId]
   );
 
-  const [simulating, setSimulating] = useState(false);
   const [expandedDateId, setExpandedDateId] = useState<string | null>(null);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
-
-  const handleSimulate = async () => {
-    setSimulating(true);
-    try {
-      await api.runSimulationRound({ rounds: 1 });
-      refetchUser();
-      refetchDrift();
-    } finally {
-      setSimulating(false);
-    }
-  };
 
   const stated = user?.statedPreferences;
   const revealed = user?.revealedPreferences;
@@ -295,20 +283,14 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
           )}
         </div>
 
-        {/* Simulate more */}
-        <div style={{ paddingTop: 8 }}>
+        {/* Start over */}
+        <div style={{ paddingTop: 16 }}>
           <button
             className="btn btn-outline btn-full"
-            onClick={handleSimulate}
-            disabled={simulating}
+            onClick={onStartOver}
           >
-            {simulating ? 'Simulating...' : 'Simulate more dates'}
+            Start over
           </button>
-        </div>
-
-        {/* Start over */}
-        <div className="start-over">
-          <button onClick={onStartOver}>Start over</button>
         </div>
       </div>
     </div>

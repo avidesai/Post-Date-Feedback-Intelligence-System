@@ -997,6 +997,7 @@ textarea::placeholder {
 .chat-container {
   width: 100%;
   max-width: 440px;
+  max-height: 460px;
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -1012,8 +1013,7 @@ textarea::placeholder {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 400px;
-  min-height: 200px;
+  min-height: 120px;
 }
 
 .chat-bubble {
@@ -1046,10 +1046,17 @@ textarea::placeholder {
   padding: 12px 16px;
   border-top: 1px solid var(--border);
   background: var(--surface);
+  position: relative;
+  flex-wrap: wrap;
+}
+
+.chat-input-bar.listening {
+  border-top-color: var(--warning);
 }
 
 .chat-input {
   flex: 1;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 10px 16px;
@@ -1072,6 +1079,13 @@ textarea::placeholder {
   color: var(--text-tertiary);
 }
 
+.chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .chat-send {
   width: 38px;
   height: 38px;
@@ -1092,6 +1106,87 @@ textarea::placeholder {
 
 .chat-send:not(:disabled):hover {
   background: var(--accent);
+}
+
+/* ═══ Mic Button ═══ */
+
+.chat-mic {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  border: 1.5px solid var(--border);
+}
+
+.chat-mic:hover {
+  color: var(--text);
+  border-color: var(--text-tertiary);
+}
+
+.chat-mic.active {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+  animation: micPulse 1.5s ease-in-out infinite;
+}
+
+.chat-mic:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(184, 84, 80, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(184, 84, 80, 0); }
+}
+
+/* ═══ Listening Indicator ═══ */
+
+.listening-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding-bottom: 8px;
+}
+
+.listening-label {
+  font-size: 12px;
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.listening-wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+}
+
+.listening-wave span {
+  display: block;
+  width: 3px;
+  height: 4px;
+  background: var(--danger);
+  border-radius: 2px;
+  animation: waveBar 0.8s ease-in-out infinite;
+}
+
+.listening-wave span:nth-child(1) { animation-delay: 0s; }
+.listening-wave span:nth-child(2) { animation-delay: 0.1s; }
+.listening-wave span:nth-child(3) { animation-delay: 0.2s; }
+.listening-wave span:nth-child(4) { animation-delay: 0.3s; }
+.listening-wave span:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes waveBar {
+  0%, 100% { height: 4px; }
+  50% { height: 14px; }
 }
 
 /* Typing dots animation */
