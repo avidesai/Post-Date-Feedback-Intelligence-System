@@ -29,6 +29,7 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
   const [scores, setScores] = useState<[number, number, number, number, number]>([0.5, 0.5, 0.5, 0.5, 0.5]);
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const date = dates[currentIndex];
@@ -45,8 +46,14 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
     if (isLast) {
       onComplete();
     } else {
+      // Brief transition to cleanly unmount old ChatConversation before mounting new one
+      setTransitioning(true);
+      setSubmitting(false);
       resetForm();
-      setCurrentIndex(i => i + 1);
+      setTimeout(() => {
+        setCurrentIndex(i => i + 1);
+        setTransitioning(false);
+      }, 100);
     }
   };
 
@@ -136,7 +143,9 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
         </button>
       </div>
 
-      {mode === 'chat' ? (
+      {transitioning ? (
+        <div style={{ minHeight: 200 }} />
+      ) : mode === 'chat' ? (
         <>
           <ChatConversation
             key={date.dateId}
