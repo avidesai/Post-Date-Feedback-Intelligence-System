@@ -53,6 +53,22 @@ export const extractedFeedbackSchema = z.object({
   chemistrySummary: z.string().describe('Brief summary of the romantic chemistry'),
 });
 
+// what the LLM should return for preference extraction from chat
+export const extractedPreferencesSchema = z.object({
+  conversation: z.number().min(0).max(1).describe('How much this person values good conversation quality (0 = indifferent, 1 = most important)'),
+  emotional: z.number().min(0).max(1).describe('How much this person values emotional connection and feeling understood'),
+  interests: z.number().min(0).max(1).describe('How much this person values shared interests and hobbies'),
+  chemistry: z.number().min(0).max(1).describe('How much this person values physical chemistry and attraction'),
+  values: z.number().min(0).max(1).describe('How much this person values alignment on life values, goals, and lifestyle'),
+});
+
+export const extractPreferencesRequestSchema = z.object({
+  transcript: z.array(z.object({
+    question: z.string(),
+    answer: z.string(),
+  })).min(1),
+});
+
 export const simulationConfigSchema = z.object({
   userCount: z.number().int().min(4).max(100).default(20),
   iterationsPerRound: z.number().int().min(1).max(50).default(10),

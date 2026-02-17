@@ -44,12 +44,12 @@ export const submitFeedback = (data: {
   dateId: string;
   fromUserId: string;
   aboutUserId: string;
-  overallRating: number;
-  conversationScore: number;
-  emotionalScore: number;
-  interestsScore: number;
-  chemistryScore: number;
-  valuesScore: number;
+  overallRating?: number;
+  conversationScore?: number;
+  emotionalScore?: number;
+  interestsScore?: number;
+  chemistryScore?: number;
+  valuesScore?: number;
   rawText?: string;
 }) => request<{ feedback: Feedback; llmExtracted: boolean }>('/api/feedback', {
   method: 'POST',
@@ -80,6 +80,13 @@ export const runSimulation = (config: { rounds: number }) =>
 // feedback about a user (what others said about them)
 export const getFeedbackAboutUser = (userId: string) =>
   request<Feedback[]>(`/api/feedback/about/${userId}`);
+
+// extract preferences from chat transcript
+export const extractPreferences = (transcript: { question: string; answer: string }[]) =>
+  request<{ preferences: PreferenceVector }>('/api/extract/preferences', {
+    method: 'POST',
+    body: JSON.stringify({ transcript }),
+  });
 
 // run a single simulation round
 export const runSimulationRound = (config: { rounds: number }) =>

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import * as api from '../api';
 import { DIMENSIONS, DIMENSION_LABELS, DIMENSION_TIPS } from '../types';
+import { getRecapQuestions } from '../data/questions';
+import ChatConversation from './ChatConversation';
 
 interface DateInfo {
   dateId: string;
@@ -18,8 +20,11 @@ interface Props {
   onComplete: () => void;
 }
 
+type Mode = 'chat' | 'sliders';
+
 export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [mode, setMode] = useState<Mode>('chat');
   const [overall, setOverall] = useState(0.5);
   const [scores, setScores] = useState<[number, number, number, number, number]>([0.5, 0.5, 0.5, 0.5, 0.5]);
   const [text, setText] = useState('');
@@ -36,7 +41,16 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
     setError(null);
   };
 
-  const handleSubmit = async () => {
+  const advance = () => {
+    if (isLast) {
+      onComplete();
+    } else {
+      resetForm();
+      setCurrentIndex(i => i + 1);
+    }
+  };
+
+  const handleSliderSubmit = async () => {
     setSubmitting(true);
     setError(null);
     try {
@@ -52,16 +66,32 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
         valuesScore: scores[4],
         rawText: text || undefined,
       });
-
-      if (isLast) {
-        onComplete();
-      } else {
-        resetForm();
-        setCurrentIndex(i => i + 1);
-      }
+      advance();
     } catch (e: any) {
       setError(e.message || 'Failed to submit');
     } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleChatComplete = async (transcript: { question: string; answer: string }[]) => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      // Format transcript as natural text for the existing LLM extraction pipeline
+      const rawText = transcript
+        .map(t => `Q: ${t.question}\nA: ${t.answer}`)
+        .join('\n\n');
+
+      await api.submitFeedback({
+        dateId: date.dateId,
+        fromUserId: userId,
+        aboutUserId: date.otherUserId,
+        rawText,
+      });
+      advance();
+    } catch (e: any) {
+      setError(e.message || 'Failed to submit');
       setSubmitting(false);
     }
   };
@@ -90,85 +120,120 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
         <div className="rating-venue">{date.venue}</div>
       </div>
 
-      {/* Rating Form */}
-      <div className="rating-form">
-        <div className="rating-form-title">How was this date?</div>
-
-        {/* Overall */}
-        <div className="rating-overall">
-          <div className="pref-row">
-            <div className="pref-header">
-              <span className="pref-label">Overall</span>
-              <span className="pref-value">{(overall * 10).toFixed(1)}</span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={overall}
-              onChange={(e) => setOverall(parseFloat(e.target.value))}
-            />
-          </div>
-        </div>
-
-        {/* Per-dimension scores */}
-        {DIMENSIONS.map((dim, i) => (
-          <div key={dim} className="pref-row">
-            <div className="pref-header">
-              <span className="pref-label">
-                <span className="tooltip-wrap">
-                  {DIMENSION_LABELS[dim]}
-                  <span className="tooltip-icon" tabIndex={0}>?</span>
-                  <span className="tooltip-text">{DIMENSION_TIPS[dim]}</span>
-                </span>
-              </span>
-              <span className="pref-value">{(scores[i] * 10).toFixed(1)}</span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={scores[i]}
-              onChange={(e) => {
-                const next = [...scores] as [number, number, number, number, number];
-                next[i] = parseFloat(e.target.value);
-                setScores(next);
-              }}
-            />
-          </div>
-        ))}
-
-        {/* Optional text */}
-        <div className="rating-text-section">
-          <div className="rating-text-label">Anything else? (optional)</div>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="What stood out about this date..."
-          />
-        </div>
+      {/* Mode toggle */}
+      <div className="mode-toggle" style={{ marginBottom: 16 }}>
+        <button
+          className={`mode-btn ${mode === 'chat' ? 'active' : ''}`}
+          onClick={() => setMode('chat')}
+        >
+          Conversation
+        </button>
+        <button
+          className={`mode-btn ${mode === 'sliders' ? 'active' : ''}`}
+          onClick={() => setMode('sliders')}
+        >
+          Sliders
+        </button>
       </div>
 
-      {error && (
-        <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12, textAlign: 'center' }}>
-          {error}
-        </p>
-      )}
+      {mode === 'chat' ? (
+        <>
+          <ChatConversation
+            key={date.dateId}
+            questions={getRecapQuestions(date.otherName)}
+            onComplete={handleChatComplete}
+            processing={submitting}
+            processingText="Processing your feedback..."
+          />
+          {error && (
+            <p style={{ color: 'var(--danger)', fontSize: 13, marginTop: 12, textAlign: 'center' }}>
+              {error}
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Rating Form */}
+          <div className="rating-form">
+            <div className="rating-form-title">How was this date?</div>
 
-      <button
-        className="btn btn-primary btn-full"
-        onClick={handleSubmit}
-        disabled={submitting}
-      >
-        {submitting
-          ? 'Submitting...'
-          : isLast
-            ? 'See your results'
-            : 'Next date'
-        }
-      </button>
+            {/* Overall */}
+            <div className="rating-overall">
+              <div className="pref-row">
+                <div className="pref-header">
+                  <span className="pref-label">Overall</span>
+                  <span className="pref-value">{(overall * 10).toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={overall}
+                  onChange={(e) => setOverall(parseFloat(e.target.value))}
+                />
+              </div>
+            </div>
+
+            {/* Per-dimension scores */}
+            {DIMENSIONS.map((dim, i) => (
+              <div key={dim} className="pref-row">
+                <div className="pref-header">
+                  <span className="pref-label">
+                    <span className="tooltip-wrap">
+                      {DIMENSION_LABELS[dim]}
+                      <span className="tooltip-icon" tabIndex={0}>?</span>
+                      <span className="tooltip-text">{DIMENSION_TIPS[dim]}</span>
+                    </span>
+                  </span>
+                  <span className="pref-value">{(scores[i] * 10).toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={scores[i]}
+                  onChange={(e) => {
+                    const next = [...scores] as [number, number, number, number, number];
+                    next[i] = parseFloat(e.target.value);
+                    setScores(next);
+                  }}
+                />
+              </div>
+            ))}
+
+            {/* Optional text */}
+            <div className="rating-text-section">
+              <div className="rating-text-label">Anything else? (optional)</div>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="What stood out about this date..."
+              />
+            </div>
+          </div>
+
+          {error && (
+            <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12, textAlign: 'center' }}>
+              {error}
+            </p>
+          )}
+
+          <button
+            className="btn btn-primary btn-full"
+            onClick={handleSliderSubmit}
+            disabled={submitting}
+          >
+            {submitting
+              ? 'Submitting...'
+              : isLast
+                ? 'See your results'
+                : 'Next date'
+            }
+          </button>
+        </>
+      )}
     </div>
   );
 }

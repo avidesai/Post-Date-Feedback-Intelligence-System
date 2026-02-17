@@ -11,6 +11,7 @@ import compatibilityRoutes from './routes/compatibility';
 import insightsRoutes from './routes/insights';
 import simulationRoutes from './routes/simulation';
 import placesRoutes from './routes/places';
+import extractRoutes from './routes/extract';
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/compatibility', compatibilityRoutes);
 app.use('/api/insights', insightsRoutes);
 app.use('/api/simulation', simulationRoutes);
 app.use('/api/dates', placesRoutes); // enrich endpoint lives under /api/dates/:id/enrich
+app.use('/api/extract', extractRoutes);
 
 app.listen(config.port, () => {
   console.log(`Server running on port ${config.port}`);

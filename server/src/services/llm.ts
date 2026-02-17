@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { config } from '../config';
-import { extractedFeedbackSchema } from '../schemas';
-import type { ExtractedFeedback } from '../types';
+import { extractedFeedbackSchema, extractedPreferencesSchema } from '../schemas';
+import type { ExtractedFeedback, PreferenceVector } from '../types';
 
 let client: OpenAI | null = null;
 
@@ -70,6 +70,54 @@ export async function extractFeedbackWithLLM(
 
   const parsed = completion.choices[0]?.message?.parsed;
   return parsed || null;
+}
+
+const PREFERENCES_SYSTEM_PROMPT = `You are analyzing a conversation where someone describes what they look for in romantic dates. Extract how much each dimension matters to them as a weight between 0.0 and 1.0.
+
+Scoring guide:
+- 0.0-0.2 = they barely mentioned it or actively said it doesn't matter
+- 0.3-0.4 = mentioned in passing, not a priority
+- 0.5 = neutral/average importance
+- 0.6-0.7 = clearly matters to them, mentioned with some emphasis
+- 0.8-1.0 = a top priority, they were passionate or specific about it
+
+The 5 dimensions:
+1. conversation - how much they value good conversation, banter, being able to talk easily
+2. emotional - how much they value emotional connection, feeling safe/understood, vulnerability
+3. interests - how much they value having shared hobbies, activities, lifestyle overlap
+4. chemistry - how much they value physical attraction, spark, flirting, sexual tension
+5. values - how much they value alignment on big life stuff (career, family, religion, lifestyle)
+
+Read between the lines. If someone spends a lot of time talking about one dimension, it matters to them even if they don't explicitly say "this is important." If they brush something off or give a vague answer, it probably doesn't matter much to them.`;
+
+export async function extractPreferencesFromChat(
+  transcript: { question: string; answer: string }[]
+): Promise<PreferenceVector | null> {
+  if (!config.openaiApiKey) {
+    console.log('No OpenAI API key, skipping preference extraction');
+    return null;
+  }
+
+  const openai = getClient();
+
+  const formatted = transcript
+    .map(t => `Q: ${t.question}\nA: ${t.answer}`)
+    .join('\n\n');
+
+  const completion = await openai.beta.chat.completions.parse({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: PREFERENCES_SYSTEM_PROMPT },
+      { role: 'user', content: formatted },
+    ],
+    response_format: zodResponseFormat(extractedPreferencesSchema, 'preference_extraction'),
+    temperature: 0.3,
+  });
+
+  const parsed = completion.choices[0]?.message?.parsed;
+  if (!parsed) return null;
+
+  return [parsed.conversation, parsed.emotional, parsed.interests, parsed.chemistry, parsed.values];
 }
 
 // used by the simulation engine to generate realistic date feedback text
