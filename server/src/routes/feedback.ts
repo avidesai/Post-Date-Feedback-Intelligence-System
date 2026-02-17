@@ -64,6 +64,7 @@ router.post('/', async (req, res) => {
     let bestPart = input.bestPart || null;
     let worstPart = input.worstPart || null;
     let chemistryText = input.chemistryText || null;
+    let dimensionSnippets: Record<string, string> | null = null;
 
     // if we got raw text and are missing structured scores, try LLM extraction
     const hasStructuredScores = input.overallRating !== undefined;
@@ -86,6 +87,7 @@ router.post('/', async (req, res) => {
           bestPart = extracted.bestPart;
           worstPart = extracted.worstPart;
           chemistryText = extracted.chemistrySummary;
+          dimensionSnippets = extracted.dimensionSnippets;
           llmExtracted = true;
         }
       } catch (err) {
@@ -100,6 +102,7 @@ router.post('/', async (req, res) => {
       bestPart: bestPart || undefined,
       worstPart: worstPart || undefined,
       chemistryText: chemistryText || undefined,
+      dimensionSnippets,
       llmExtracted,
     });
 

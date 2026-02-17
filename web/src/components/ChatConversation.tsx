@@ -35,8 +35,9 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     }
   }, []);
 
-  // Show and speak first question on mount
+  // Prefetch first question's audio on mount, then show and speak it
   useEffect(() => {
+    tts.prefetch(questions[0]);
     setTyping(true);
     const t = setTimeout(() => {
       setMessages([{ role: 'ai', text: questions[0] }]);
@@ -52,12 +53,12 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     scrollToBottom();
   }, [messages, typing, speech.transcript, scrollToBottom]);
 
-  // Focus input when AI finishes speaking (and not listening)
+  // Focus input when not typing and not done
   useEffect(() => {
-    if (!typing && !done && !speech.isListening && !aiSpeaking && inputRef.current) {
+    if (!typing && !done && !speech.isListening && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [typing, done, speech.isListening, aiSpeaking]);
+  }, [typing, done, speech.isListening]);
 
   // Sync speech transcript into input field
   useEffect(() => {
@@ -74,7 +75,13 @@ export default function ChatConversation({ questions, onComplete, processing, pr
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text || typing || done || aiSpeaking) return;
+    if (!text || typing || done) return;
+
+    // Stop AI voice if still speaking
+    if (aiSpeaking) {
+      tts.stop();
+      setAiSpeaking(false);
+    }
 
     // Stop listening if active
     if (speech.isListening) {
@@ -99,6 +106,9 @@ export default function ChatConversation({ questions, onComplete, processing, pr
       setDone(true);
       onComplete(transcriptRef.current);
     } else {
+      // Prefetch next question's audio immediately
+      tts.prefetch(questions[nextQ]);
+
       setTyping(true);
       setCurrentQ(nextQ);
       setTimeout(() => {
@@ -120,6 +130,11 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     if (speech.isListening) {
       speech.stop();
     } else {
+      // Stop AI voice if speaking so mic can hear clearly
+      if (aiSpeaking) {
+        tts.stop();
+        setAiSpeaking(false);
+      }
       speech.start();
     }
   };
@@ -199,19 +214,18 @@ export default function ChatConversation({ questions, onComplete, processing, pr
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              aiSpeaking ? 'AI is speaking...'
-              : speech.isListening ? 'Speak now...'
-              : 'Type your answer...'
+              speech.isListening ? 'Speak now...'
+              : 'Type or tap the mic...'
             }
             rows={1}
-            disabled={typing || aiSpeaking}
+            disabled={typing}
           />
           <div className="chat-actions">
             {speech.isSupported && (
               <button
                 className={`chat-mic ${speech.isListening ? 'active' : ''}`}
                 onClick={toggleMic}
-                disabled={typing || done || aiSpeaking}
+                disabled={typing || done}
                 type="button"
                 title={speech.isListening ? 'Stop listening' : 'Speak your answer'}
               >
@@ -232,7 +246,7 @@ export default function ChatConversation({ questions, onComplete, processing, pr
             <button
               className="chat-send"
               onClick={handleSend}
-              disabled={!input.trim() || typing || aiSpeaking}
+              disabled={!input.trim() || typing}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13" />

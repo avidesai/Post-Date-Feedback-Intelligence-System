@@ -53,6 +53,7 @@ export interface Feedback {
   bestPart: string | null;
   worstPart: string | null;
   chemistryText: string | null;
+  dimensionSnippets: Record<string, string> | null;
   rawText: string | null;
   llmExtracted: boolean;
   createdAt: string;
@@ -91,6 +92,13 @@ export interface ExtractedFeedback {
   bestPart: string;
   worstPart: string;
   chemistrySummary: string;
+  dimensionSnippets: {
+    conversation: string;
+    emotional: string;
+    interests: string;
+    chemistry: string;
+    values: string;
+  };
 }
 
 // venue info from google places

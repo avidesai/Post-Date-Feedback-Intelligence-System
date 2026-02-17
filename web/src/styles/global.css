@@ -873,6 +873,45 @@ textarea::placeholder {
   font-weight: 500;
 }
 
+/* ═══ Dimension Snippets ═══ */
+
+.dim-snippet {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-top: 4px;
+  padding-left: 2px;
+  line-height: 1.4;
+}
+
+.reveal-snippets {
+  margin-top: 4px;
+}
+
+.feedback-highlight {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.feedback-highlight-low {
+  margin-top: 8px;
+}
+
+.feedback-highlight-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
 /* ═══ Collapsible ═══ */
 
 .collapsible-trigger {

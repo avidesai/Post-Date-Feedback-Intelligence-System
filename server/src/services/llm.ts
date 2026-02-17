@@ -13,7 +13,7 @@ function getClient(): OpenAI {
   return client;
 }
 
-const SYSTEM_PROMPT = `You are a dating feedback analyst. Given someone's post-date debrief (casual text about how a date went), extract structured compatibility scores.
+const SYSTEM_PROMPT = `You are a dating feedback analyst. Given someone's post-date debrief (casual text about how a date went), extract structured compatibility scores and pull key snippets from their own words.
 
 Score each dimension from 0.0 to 1.0 where:
 - 0.0 = terrible/nonexistent
@@ -29,12 +29,15 @@ The 5 dimensions:
 
 Also extract overall satisfaction (0-1), best part, worst part, and a chemistry summary.
 
+For dimensionSnippets: pull a short, natural snippet (1 sentence max) from the user's own words that best captures how they felt about each dimension. Use their actual phrasing when possible. If they didn't mention a dimension directly, paraphrase what their response implies about it. Keep snippets casual and conversational, matching the user's tone. Never use em dashes.
+
 Important: read between the lines. People often downplay or overstate things. Look for specific behavioral signals rather than just taking their words at face value. If someone says "it was fine" thats probably a 0.4-0.5, not a 0.7.
 
 Here are some calibration examples:
 
 Input: "Honestly it was amazing. We talked for like 4 hours and I didn't even notice. She's so funny and we're into all the same stuff. Only weird thing was she seemed kinda closed off when I asked about her family."
 Expected: conversation=0.85, emotional=0.55, interests=0.8, chemistry=0.7, values=0.5, overall=0.72
+Snippets: conversation="We talked for like 4 hours and I didn't even notice", emotional="She seemed kinda closed off when I asked about her family", interests="We're into all the same stuff", chemistry=(inferred from overall positive tone), values="Seemed closed off when I asked about her family"
 
 Input: "It was ok I guess. Nice enough person but the conversation kept dying. We don't really have much in common. But he was cute so there's that."
 Expected: conversation=0.3, emotional=0.25, interests=0.2, chemistry=0.6, values=0.35, overall=0.35

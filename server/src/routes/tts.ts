@@ -32,6 +32,7 @@ router.post('/', async (req, res) => {
       voice: 'nova',
       input: text,
       response_format: 'mp3',
+      speed: 1.15,
     });
 
     const buffer = Buffer.from(await response.arrayBuffer());

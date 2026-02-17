@@ -65,6 +65,7 @@ export interface Feedback {
   bestPart: string | null;
   worstPart: string | null;
   chemistryText: string | null;
+  dimensionSnippets: Record<string, string> | null;
   rawText: string | null;
   llmExtracted: boolean;
   createdAt: string;

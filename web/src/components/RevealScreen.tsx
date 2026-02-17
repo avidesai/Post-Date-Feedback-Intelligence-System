@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApi } from '../hooks';
 import * as api from '../api';
-import type { PreferenceVector } from '../types';
+import type { PreferenceVector, Feedback } from '../types';
 import { DIMENSIONS, DIMENSION_LABELS, DIMENSION_TIPS } from '../types';
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
 
 export default function RevealScreen({ userId, statedPreferences, onContinue }: Props) {
   const { data: user, loading } = useApi(() => api.getUser(userId), [userId]);
+  const { data: myFeedback } = useApi(() => api.getFeedbackByUser(userId), [userId]);
   const [animate, setAnimate] = useState(false);
 
   useEffect(() => {
@@ -40,6 +41,20 @@ export default function RevealScreen({ userId, statedPreferences, onContinue }: 
   const biggestLabel = DIMENSION_LABELS[DIMENSIONS[maxGapDim]].toLowerCase();
   const statedMore = statedPreferences[maxGapDim] > revealed[maxGapDim];
 
+  // Collect snippets from feedback that have LLM-extracted dimension snippets
+  const snippetsForDims: Record<string, string[]> = {};
+  (myFeedback || []).forEach((fb: Feedback) => {
+    if (fb.dimensionSnippets) {
+      DIMENSIONS.forEach(dim => {
+        const s = fb.dimensionSnippets?.[dim];
+        if (s) {
+          if (!snippetsForDims[dim]) snippetsForDims[dim] = [];
+          snippetsForDims[dim].push(s);
+        }
+      });
+    }
+  });
+
   return (
     <div className="reveal-screen fade-in">
       <h1 className="reveal-heading">
@@ -65,6 +80,8 @@ export default function RevealScreen({ userId, statedPreferences, onContinue }: 
           const stated = statedPreferences[i];
           const rev = revealed[i];
           const gap = Math.abs(stated - rev);
+
+          const dimSnippets = snippetsForDims[dim];
 
           return (
             <div key={dim} className="reveal-dim">
@@ -94,6 +111,13 @@ export default function RevealScreen({ userId, statedPreferences, onContinue }: 
                   />
                 </div>
               </div>
+              {animate && dimSnippets && dimSnippets.length > 0 && (
+                <div className="reveal-snippets">
+                  {dimSnippets.map((s, si) => (
+                    <div key={si} className="dim-snippet">"{s}"</div>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}

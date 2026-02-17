@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApi } from '../hooks';
 import * as api from '../api';
-import type { Feedback } from '../types';
+import type { Feedback, Dimension } from '../types';
 import { DIMENSIONS, DIMENSION_LABELS, DIMENSION_TIPS } from '../types';
 
 interface DateInfo {
@@ -286,29 +286,47 @@ function ratingBadgeClass(rating: number): string {
 }
 
 function FeedbackBars({ feedback }: { feedback: Feedback }) {
-  const scores: [string, number][] = DIMENSIONS.map((dim) => {
-    const key = `${dim}Score` as keyof Feedback;
-    return [DIMENSION_LABELS[dim], feedback[key] as number];
-  });
+  const snippets = feedback.dimensionSnippets;
 
   return (
     <div>
-      {scores.map(([label, score]) => (
-        <div key={label} className="dim-row" style={{ marginBottom: 8 }}>
-          <div className="dim-name">
-            <span>{label}</span>
-            <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-              {(score * 10).toFixed(1)}
-            </span>
+      {DIMENSIONS.map((dim) => {
+        const key = `${dim}Score` as keyof Feedback;
+        const score = feedback[key] as number;
+        const snippet = snippets?.[dim as Dimension];
+
+        return (
+          <div key={dim} className="dim-row" style={{ marginBottom: snippet ? 12 : 8 }}>
+            <div className="dim-name">
+              <span>{DIMENSION_LABELS[dim]}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                {(score * 10).toFixed(1)}
+              </span>
+            </div>
+            <div className="dim-track">
+              <div className="dim-fill-a" style={{ width: `${score * 100}%`, opacity: 1 }} />
+            </div>
+            {snippet && (
+              <div className="dim-snippet">"{snippet}"</div>
+            )}
           </div>
-          <div className="dim-track">
-            <div className="dim-fill-a" style={{ width: `${score * 100}%`, opacity: 1 }} />
-          </div>
-        </div>
-      ))}
+        );
+      })}
       <div style={{ marginTop: 4, fontSize: 13, color: 'var(--text-secondary)' }}>
         Overall: <strong>{(feedback.overallRating * 10).toFixed(1)}</strong>
       </div>
+      {feedback.bestPart && (
+        <div className="feedback-highlight">
+          <span className="feedback-highlight-label">Best part</span>
+          {feedback.bestPart}
+        </div>
+      )}
+      {feedback.worstPart && (
+        <div className="feedback-highlight feedback-highlight-low">
+          <span className="feedback-highlight-label">Weakest part</span>
+          {feedback.worstPart}
+        </div>
+      )}
     </div>
   );
 }

@@ -51,6 +51,13 @@ export const extractedFeedbackSchema = z.object({
   bestPart: z.string().describe('Best part of the date in one sentence'),
   worstPart: z.string().describe('Worst or weakest part of the date in one sentence'),
   chemistrySummary: z.string().describe('Brief summary of the romantic chemistry'),
+  dimensionSnippets: z.object({
+    conversation: z.string().describe('Short quote or paraphrase from the user about how the conversation went'),
+    emotional: z.string().describe('Short quote or paraphrase from the user about emotional connection'),
+    interests: z.string().describe('Short quote or paraphrase from the user about shared interests'),
+    chemistry: z.string().describe('Short quote or paraphrase from the user about chemistry/attraction'),
+    values: z.string().describe('Short quote or paraphrase from the user about values/lifestyle alignment'),
+  }).describe('Per-dimension snippets pulled from the user\'s own words'),
 });
 
 // what the LLM should return for preference extraction from chat

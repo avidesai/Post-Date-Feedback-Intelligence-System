@@ -54,6 +54,7 @@ export const SCHEMA = `
     best_part TEXT,
     worst_part TEXT,
     chemistry_text TEXT,
+    dimension_snippets TEXT,
     raw_text TEXT,
     llm_extracted INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))

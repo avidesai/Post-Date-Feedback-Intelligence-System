@@ -43,6 +43,7 @@ describe('preference-learning', () => {
         bestPart: null,
         worstPart: null,
         chemistryText: null,
+        dimensionSnippets: null,
         rawText: null,
         llmExtracted: false,
         createdAt: new Date().toISOString(),

@@ -77,6 +77,7 @@ function rowToFeedback(row: any): Feedback {
     bestPart: row.best_part,
     worstPart: row.worst_part,
     chemistryText: row.chemistry_text,
+    dimensionSnippets: row.dimension_snippets ? JSON.parse(row.dimension_snippets) : null,
     rawText: row.raw_text,
     llmExtracted: !!row.llm_extracted,
     createdAt: row.created_at,
@@ -236,6 +237,7 @@ export function createFeedback(input: SubmitFeedbackInput & {
   chemistryScore: number;
   valuesScore: number;
   llmExtracted?: boolean;
+  dimensionSnippets?: Record<string, string> | null;
 }): Feedback {
   const db = getDb();
   const id = uuid();
@@ -244,13 +246,14 @@ export function createFeedback(input: SubmitFeedbackInput & {
     INSERT INTO feedback (id, date_id, from_user_id, about_user_id,
       overall_rating, conversation_score, emotional_score, interests_score,
       chemistry_score, values_score, best_part, worst_part, chemistry_text,
-      raw_text, llm_extracted)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      dimension_snippets, raw_text, llm_extracted)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, input.dateId, input.fromUserId, input.aboutUserId,
     input.overallRating, input.conversationScore, input.emotionalScore,
     input.interestsScore, input.chemistryScore, input.valuesScore,
     input.bestPart || null, input.worstPart || null, input.chemistryText || null,
+    input.dimensionSnippets ? JSON.stringify(input.dimensionSnippets) : null,
     input.rawText || null, input.llmExtracted ? 1 : 0
   );
 

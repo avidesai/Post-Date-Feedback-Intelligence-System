@@ -28,6 +28,14 @@ export function initDb(): void {
   const database = getDb();
   // run the schema - all CREATE IF NOT EXISTS so its safe to run multiple times
   database.exec(SCHEMA);
+
+  // migrations for existing databases
+  try {
+    database.exec('ALTER TABLE feedback ADD COLUMN dimension_snippets TEXT');
+  } catch {
+    // column already exists, ignore
+  }
+
   console.log('Database initialized');
 }
 
