@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import multer from 'multer';
 import OpenAI from 'openai';
 import { config } from '../config';
+import { toFile } from 'openai';
 
 const router = Router();
 
@@ -46,6 +48,37 @@ router.post('/', async (req, res) => {
   } catch (err: any) {
     console.error('TTS failed:', err);
     res.status(500).json({ error: 'TTS generation failed' });
+  }
+});
+
+// POST /api/tts/transcribe
+// Takes audio file, returns text via Whisper
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+
+router.post('/transcribe', upload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'audio file is required' });
+    }
+
+    if (!config.openaiApiKey) {
+      return res.status(503).json({ error: 'OpenAI API key not configured' });
+    }
+
+    const openai = getClient();
+
+    const file = await toFile(req.file.buffer, 'audio.webm', { type: req.file.mimetype });
+
+    const transcription = await openai.audio.transcriptions.create({
+      model: 'whisper-1',
+      file,
+      language: 'en',
+    });
+
+    res.json({ text: transcription.text });
+  } catch (err: any) {
+    console.error('Transcription failed:', err);
+    res.status(500).json({ error: 'Transcription failed' });
   }
 });
 

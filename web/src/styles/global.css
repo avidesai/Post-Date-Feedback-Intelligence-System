@@ -1050,7 +1050,7 @@ textarea::placeholder {
 .chat-container {
   width: 100%;
   max-width: 440px;
-  max-height: 480px;
+  max-height: 580px;
   display: flex;
   flex-direction: column;
   background: var(--bg);
@@ -1183,31 +1183,31 @@ textarea::placeholder {
 }
 
 .chat-input-bar {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  padding: 12px 16px;
+  padding: 8px 12px 12px;
   border-top: 1px solid var(--border-light);
   background: var(--bg);
-  position: relative;
-  flex-wrap: wrap;
 }
 
-.chat-input-bar.listening {
-  border-top-color: var(--warning);
+.chat-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 4px 4px 4px 4px;
+  border: 1px solid var(--border);
 }
 
 .chat-input {
   flex: 1;
   min-width: 0;
   border: none;
-  border-radius: 20px;
-  padding: 10px 16px;
+  padding: 8px 4px 8px 8px;
   font-family: inherit;
   font-size: 14px;
   resize: none;
   outline: none;
-  background: var(--surface);
+  background: transparent;
   color: var(--text);
   line-height: 1.4;
   max-height: 100px;
@@ -1218,74 +1218,43 @@ textarea::placeholder {
   color: var(--text-tertiary);
 }
 
-.chat-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
+/* ═══ Mic + Send Buttons (unified) ═══ */
 
+.chat-mic,
 .chat-send {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: var(--surface-alt);
+  background: none;
   color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   transition: all 0.15s;
-  border: 1px solid var(--border);
+  border: none;
+}
+
+.chat-mic:hover,
+.chat-send:not(:disabled):hover {
+  color: var(--text);
+  background: var(--surface-alt);
 }
 
 .chat-send:disabled {
-  opacity: 0.25;
+  opacity: 0.2;
   cursor: not-allowed;
 }
 
-.chat-send:not(:disabled) {
-  color: var(--text);
-  background: var(--surface);
-}
-
-.chat-send:not(:disabled):hover {
-  background: var(--text);
-  color: var(--bg);
-  border-color: var(--text);
-}
-
-/* ═══ Mic Button ═══ */
-
-.chat-mic {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: var(--surface-alt);
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.2s;
-  border: 1.5px solid var(--border);
-}
-
-.chat-mic:hover {
-  color: var(--text);
-  border-color: var(--text-tertiary);
+.chat-mic:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
 }
 
 .chat-mic.active {
   background: var(--danger);
   color: white;
-  border-color: var(--danger);
   animation: micPulse 1.5s ease-in-out infinite;
-}
-
-.chat-mic:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
 }
 
 @keyframes micPulse {
@@ -1299,8 +1268,7 @@ textarea::placeholder {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
-  padding-bottom: 8px;
+  padding: 0 8px 6px;
 }
 
 .listening-label {

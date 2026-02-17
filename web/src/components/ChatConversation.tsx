@@ -51,14 +51,19 @@ export default function ChatConversation({ questions, onComplete, processing, pr
   // Scroll on new messages or speech transcript changes
   useEffect(() => {
     scrollToBottom();
-  }, [messages, typing, speech.transcript, scrollToBottom]);
+  }, [messages, typing, speech.transcript, speech.isTranscribing, scrollToBottom]);
 
-  // Focus input when not typing and not done
+  // Auto-start mic when AI finishes speaking
   useEffect(() => {
-    if (!typing && !done && !speech.isListening && inputRef.current) {
-      inputRef.current.focus();
+    if (!aiSpeaking && !typing && !done && !speech.isListening && !speech.isTranscribing) {
+      // Small delay so the transition feels natural
+      const t = setTimeout(() => {
+        speech.start();
+      }, 300);
+      return () => clearTimeout(t);
     }
-  }, [typing, done, speech.isListening]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiSpeaking, typing, done]);
 
   // Sync speech transcript into input field
   useEffect(() => {
@@ -66,6 +71,24 @@ export default function ChatConversation({ questions, onComplete, processing, pr
       setInput(speech.transcript);
     }
   }, [speech.transcript]);
+
+  // Auto-send after transcription completes (voice stopped + text ready)
+  const pendingAutoSend = useRef(false);
+  useEffect(() => {
+    // When listening stops, mark that we're waiting for transcription
+    if (!speech.isListening && speech.isTranscribing) {
+      pendingAutoSend.current = true;
+    }
+    // When transcription finishes and we were waiting, auto-send
+    if (pendingAutoSend.current && !speech.isListening && !speech.isTranscribing && speech.transcript) {
+      pendingAutoSend.current = false;
+      // Trigger send on next tick so input state is synced
+      setTimeout(() => {
+        const sendBtn = document.querySelector('.chat-send') as HTMLButtonElement;
+        if (sendBtn && !sendBtn.disabled) sendBtn.click();
+      }, 100);
+    }
+  }, [speech.isListening, speech.isTranscribing, speech.transcript]);
 
   const speakQuestion = async (text: string) => {
     setAiSpeaking(true);
@@ -127,10 +150,6 @@ export default function ChatConversation({ questions, onComplete, processing, pr
   };
 
   const toggleMic = () => {
-    if (!speech.isSupported) {
-      alert('Speech recognition is not supported in this browser. Try Chrome or Edge.');
-      return;
-    }
     if (speech.isListening) {
       speech.stop();
     } else {
@@ -204,27 +223,16 @@ export default function ChatConversation({ questions, onComplete, processing, pr
       </div>
 
       {!done && (
-        <div className={`chat-input-bar ${speech.isListening ? 'listening' : ''}`}>
-          {speech.isListening && (
+        <div className="chat-input-bar">
+          {(speech.isListening || speech.isTranscribing) && (
             <div className="listening-indicator">
               <div className="listening-wave"><span /><span /><span /><span /><span /></div>
-              <span className="listening-label">Listening...</span>
+              <span className="listening-label">
+                {speech.isTranscribing ? 'Transcribing...' : 'Listening...'}
+              </span>
             </div>
           )}
-          <textarea
-            ref={inputRef}
-            className="chat-input"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              speech.isListening ? 'Speak now...'
-              : 'Type or tap the mic...'
-            }
-            rows={1}
-            disabled={typing}
-          />
-          <div className="chat-actions">
+          <div className="chat-input-row">
             <button
               className={`chat-mic ${speech.isListening ? 'active' : ''}`}
               onClick={toggleMic}
@@ -233,11 +241,11 @@ export default function ChatConversation({ questions, onComplete, processing, pr
               title={speech.isListening ? 'Stop listening' : 'Speak your answer'}
             >
               {speech.isListening ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <rect x="6" y="6" width="12" height="12" rx="2" />
                 </svg>
               ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
                   <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
                   <line x1="12" y1="19" x2="12" y2="23" />
@@ -245,12 +253,27 @@ export default function ChatConversation({ questions, onComplete, processing, pr
                 </svg>
               )}
             </button>
+            <textarea
+              ref={inputRef}
+              className="chat-input"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                speech.isListening ? 'Speak now...'
+                : speech.isTranscribing ? 'Transcribing...'
+                : 'Type or speak...'
+              }
+              rows={1}
+              disabled={typing}
+            />
             <button
               className="chat-send"
               onClick={handleSend}
               disabled={!input.trim() || typing}
+              type="button"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13" />
                 <polygon points="22 2 15 22 11 13 2 9 22 2" />
               </svg>
