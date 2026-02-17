@@ -20,11 +20,49 @@ interface Props {
   onStartOver: () => void;
 }
 
+function generateDimensionInsights(
+  stated: PreferenceVector,
+  revealed: PreferenceVector
+): string[] {
+  const GAP_THRESHOLD = 0.12;
+
+  const dims = DIMENSIONS.map((dim, i) => ({
+    dim, i,
+    gap: stated[i] - revealed[i],
+    absGap: Math.abs(stated[i] - revealed[i]),
+  }))
+    .filter(d => d.absGap > GAP_THRESHOLD)
+    .sort((a, b) => b.absGap - a.absGap);
+
+  const overvaluedTemplates = [
+    (label: string, s: string, r: string) =>
+      `You rate ${label} as ${s}/10 important, but your revealed preference is ${r}/10. This dimension might matter less to your actual happiness than you think.`,
+    (label: string, s: string, r: string) =>
+      `You say ${label} is a ${s}/10 priority, but your actual satisfaction doesn't depend on it as much (${r}/10). Maybe it isn't as make-or-break as you thought.`,
+    (label: string, s: string, r: string) =>
+      `${label} sits at ${s}/10 in your stated preferences but only ${r}/10 in practice. Your dates suggest this isn't driving your satisfaction the way you'd expect.`,
+  ];
+
+  const undervaluedTemplates = [
+    (label: string, s: string, r: string) =>
+      `You only rated ${label} as ${s}/10 important, but it actually shows up as ${r}/10 in your feedback. This might be a blind spot worth paying attention to.`,
+    (label: string, s: string, r: string) =>
+      `${label} registers at ${r}/10 in your dating behavior, even though you rated it ${s}/10. Looks like this matters to you more than you realized.`,
+    (label: string, s: string, r: string) =>
+      `You said ${label} was only a ${s}/10, but your actual ratings put it at ${r}/10. Your behavior is telling a different story than your words.`,
+  ];
+
+  return dims.map(({ dim, i, gap }, idx) => {
+    const sVal = (stated[i] * 10).toFixed(1);
+    const rVal = (revealed[i] * 10).toFixed(1);
+    const label = DIMENSION_LABELS[dim].toLowerCase();
+    const templates = gap > 0 ? overvaluedTemplates : undervaluedTemplates;
+    return templates[idx % templates.length](label, sVal, rVal);
+  });
+}
+
 export default function Dashboard({ userId, dates, onStartOver }: Props) {
   const { data: user } = useApi(() => api.getUser(userId), [userId]);
-  const { data: drift } = useApi(
-    () => api.getPreferenceDrift(userId), [userId]
-  );
   const { data: myFeedback } = useApi(
     () => api.getFeedbackByUser(userId), [userId]
   );
@@ -47,19 +85,11 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
     ? sessionFeedback.reduce((sum, f) => sum + f.overallRating, 0) / sessionFeedback.length
     : null;
 
-  // Compute say-do gap: average absolute difference across dimensions, on 0-10 scale
   let sayDoGap: number | null = null;
-  let biggestGapDim = '';
-  let biggestGapValue = 0;
   if (stated && revealed) {
     let totalGap = 0;
-    DIMENSIONS.forEach((dim, i) => {
-      const gap = Math.abs(stated[i] - revealed[i]);
-      totalGap += gap;
-      if (gap > biggestGapValue) {
-        biggestGapValue = gap;
-        biggestGapDim = DIMENSION_LABELS[dim].toLowerCase();
-      }
+    DIMENSIONS.forEach((_, i) => {
+      totalGap += Math.abs(stated[i] - revealed[i]);
     });
     sayDoGap = (totalGap / DIMENSIONS.length) * 10;
   }
