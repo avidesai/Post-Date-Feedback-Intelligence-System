@@ -1,10 +1,10 @@
 {
   "version": 2,
   "framework": null,
-  "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "cd mobile && npx expo export --platform web",
-  "outputDirectory": "mobile/dist",
+  "installCommand": "cd web && npm install",
+  "buildCommand": "cd web && npm run build",
+  "outputDirectory": "web/dist",
   "rewrites": [
-    { "source": "/((?!_expo|assets|favicon.ico).*)", "destination": "/index.html" }
+    { "source": "/((?!assets).*)", "destination": "/index.html" }
   ]
 }
