@@ -10,3 +10,6 @@ build/
 *.log
 coverage/
 .turbo/
+server/data/
+server/dist/
+mobile/dist/
