@@ -965,6 +965,51 @@ textarea::placeholder {
   color: var(--text-secondary);
 }
 
+/* ═══ How It Works ═══ */
+
+.how-it-works-content {
+  margin-top: 16px;
+}
+
+.hiw-section {
+  margin-bottom: 16px;
+}
+
+.hiw-section:last-child {
+  margin-bottom: 0;
+}
+
+.hiw-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.hiw-section p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.hiw-section p:last-child {
+  margin-bottom: 0;
+}
+
+.hiw-formula {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  background: var(--surface-alt);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  margin: 8px 0;
+  overflow-x: auto;
+}
+
 /* ═══ Animations ═══ */
 
 @keyframes fadeIn {

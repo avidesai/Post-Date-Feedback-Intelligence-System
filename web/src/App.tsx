@@ -8,18 +8,20 @@ import Dashboard from './components/Dashboard';
 
 type Step = 'preferences' | 'rating' | 'reveal' | 'dashboard';
 
+interface DateInfo {
+  dateId: string;
+  otherUserId: string;
+  otherName: string;
+  otherAge: number;
+  otherBio: string;
+  venue: string;
+  dateAt: string;
+}
+
 interface DemoSession {
   userId: string;
   statedPreferences: PreferenceVector;
-  dates: {
-    dateId: string;
-    otherUserId: string;
-    otherName: string;
-    otherAge: number;
-    otherBio: string;
-    venue: string;
-    dateAt: string;
-  }[];
+  dates: DateInfo[];
 }
 
 function loadSession(): { step: Step; session: DemoSession | null } {
@@ -35,6 +37,62 @@ function loadSession(): { step: Step; session: DemoSession | null } {
 
 function saveSession(step: Step, session: DemoSession | null) {
   localStorage.setItem('demo_session', JSON.stringify({ step, session }));
+}
+
+/** Try to find a user with at least 3 dates with women (or 3 dates as fallback). */
+async function findUserWithDates(users: User[]): Promise<{ user: User; dates: DateInfo[] } | null> {
+  const userMap = new Map(users.map(u => [u.id, u]));
+  const shuffled = [...users].sort(() => Math.random() - 0.5);
+
+  // First pass: prefer users with 3+ dates with women
+  for (const candidate of shuffled) {
+    const dates: DateRecord[] = await api.getDatesForUser(candidate.id);
+    const withWomen: DateInfo[] = [];
+
+    for (const d of dates) {
+      const otherId = d.userAId === candidate.id ? d.userBId : d.userAId;
+      const other = userMap.get(otherId);
+      if (other && other.gender?.toLowerCase() === 'female') {
+        withWomen.push({
+          dateId: d.id,
+          otherUserId: otherId,
+          otherName: other.name,
+          otherAge: other.age,
+          otherBio: other.bio || '',
+          venue: d.venueName || 'Coffee date',
+          dateAt: d.dateAt,
+        });
+      }
+      if (withWomen.length >= 3) break;
+    }
+
+    if (withWomen.length >= 3) {
+      return { user: candidate, dates: withWomen.slice(0, 3) };
+    }
+  }
+
+  // Fallback: any user with 3+ dates
+  for (const candidate of shuffled) {
+    const dates: DateRecord[] = await api.getDatesForUser(candidate.id);
+    if (dates.length >= 3) {
+      const picked = dates.slice(0, 3).map(d => {
+        const otherId = d.userAId === candidate.id ? d.userBId : d.userAId;
+        const other = userMap.get(otherId);
+        return {
+          dateId: d.id,
+          otherUserId: otherId,
+          otherName: other?.name || 'Someone',
+          otherAge: other?.age || 0,
+          otherBio: other?.bio || '',
+          venue: d.venueName || 'Coffee date',
+          dateAt: d.dateAt,
+        };
+      });
+      return { user: candidate, dates: picked };
+    }
+  }
+
+  return null;
 }
 
 export default function App() {
@@ -65,87 +123,29 @@ export default function App() {
         users = await api.getUsers();
       }
 
-      // Pick a user with dates — prefer one with female dates
-      let pickedUser: User | null = null;
-      let pickedDates: {
-        dateId: string;
-        otherUserId: string;
-        otherName: string;
-        otherAge: number;
-        otherBio: string;
-        venue: string;
-        dateAt: string;
-      }[] = [];
+      // Try to find a suitable user
+      let result = await findUserWithDates(users);
 
-      // Build user map
-      const userMap = new Map(users.map(u => [u.id, u]));
-
-      // Try each user to find one with 3+ dates with women
-      const shuffled = [...users].sort(() => Math.random() - 0.5);
-      for (const candidate of shuffled) {
-        const dates: DateRecord[] = await api.getDatesForUser(candidate.id);
-        const withWomen: typeof pickedDates = [];
-
-        for (const d of dates) {
-          const otherId = d.userAId === candidate.id ? d.userBId : d.userAId;
-          const other = userMap.get(otherId);
-          if (other && other.gender?.toLowerCase() === 'female') {
-            withWomen.push({
-              dateId: d.id,
-              otherUserId: otherId,
-              otherName: other.name,
-              otherAge: other.age,
-              otherBio: other.bio || '',
-              venue: d.venueName || 'Coffee date',
-              dateAt: d.dateAt,
-            });
-          }
-          if (withWomen.length >= 3) break;
-        }
-
-        if (withWomen.length >= 3) {
-          pickedUser = candidate;
-          pickedDates = withWomen.slice(0, 3);
-          break;
-        }
+      // If no suitable user found, reseed and retry
+      if (!result) {
+        await api.seedSimulation();
+        await api.runSimulation({ rounds: 3 });
+        users = await api.getUsers();
+        result = await findUserWithDates(users);
       }
 
-      // Fallback: if no user has 3 dates with women, just use first user with 3+ dates
-      if (!pickedUser) {
-        for (const candidate of shuffled) {
-          const dates: DateRecord[] = await api.getDatesForUser(candidate.id);
-          if (dates.length >= 3) {
-            pickedUser = candidate;
-            pickedDates = dates.slice(0, 3).map(d => {
-              const otherId = d.userAId === candidate.id ? d.userBId : d.userAId;
-              const other = userMap.get(otherId);
-              return {
-                dateId: d.id,
-                otherUserId: otherId,
-                otherName: other?.name || 'Someone',
-                otherAge: other?.age || 0,
-                otherBio: other?.bio || '',
-                venue: d.venueName || 'Coffee date',
-                dateAt: d.dateAt,
-              };
-            });
-            break;
-          }
-        }
-      }
-
-      if (!pickedUser) {
-        setError('Could not find a user with enough dates. Try reseeding.');
+      if (!result) {
+        setError('Something went wrong setting up dates. Please try again.');
         return;
       }
 
       // Update stated preferences to what the user selected
-      await api.updatePreferences(pickedUser.id, prefs);
+      await api.updatePreferences(result.user.id, prefs);
 
       const newSession: DemoSession = {
-        userId: pickedUser.id,
+        userId: result.user.id,
         statedPreferences: prefs,
-        dates: pickedDates,
+        dates: result.dates,
       };
 
       goTo('rating', newSession);

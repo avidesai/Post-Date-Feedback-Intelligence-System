@@ -25,9 +25,6 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
   const { data: drift, refetch: refetchDrift } = useApi(
     () => api.getPreferenceDrift(userId), [userId]
   );
-  const { data: summary, refetch: refetchSummary } = useApi(
-    () => api.getUserSummary(userId), [userId]
-  );
   const { data: myFeedback } = useApi(
     () => api.getFeedbackByUser(userId), [userId]
   );
@@ -45,18 +42,43 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
       await api.runSimulationRound({ rounds: 1 });
       refetchUser();
       refetchDrift();
-      refetchSummary();
     } finally {
       setSimulating(false);
     }
   };
 
-  const stats = summary?.stats;
   const stated = user?.statedPreferences;
   const revealed = user?.revealedPreferences;
 
   const myFbMap = new Map((myFeedback || []).map(f => [f.dateId, f]));
   const aboutMeMap = new Map((feedbackAboutMe || []).map(f => [f.dateId, f]));
+
+  // Compute session-specific stats (only from the dates the user actually rated)
+  const sessionDateIds = new Set(dates.map(d => d.dateId));
+  const sessionFeedback = (myFeedback || []).filter(f => sessionDateIds.has(f.dateId));
+  const avgRating = sessionFeedback.length > 0
+    ? sessionFeedback.reduce((sum, f) => sum + f.overallRating, 0) / sessionFeedback.length
+    : null;
+
+  // Compute say-do gap: average absolute difference across dimensions, on 0-10 scale
+  let sayDoGap: number | null = null;
+  let biggestGapDim = '';
+  let biggestGapValue = 0;
+  if (stated && revealed) {
+    let totalGap = 0;
+    DIMENSIONS.forEach((dim, i) => {
+      const gap = Math.abs(stated[i] - revealed[i]);
+      totalGap += gap;
+      if (gap > biggestGapValue) {
+        biggestGapValue = gap;
+        biggestGapDim = DIMENSION_LABELS[dim].toLowerCase();
+      }
+    });
+    sayDoGap = (totalGap / DIMENSIONS.length) * 10;
+  }
+
+  // Insights from the divergence analysis (drift and summary return identical insights)
+  const insights = drift?.currentDivergence?.insights || [];
 
   return (
     <div className="dashboard">
@@ -69,34 +91,24 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
 
       <div className="dashboard-content">
         {/* Stats */}
-        {stats && (
-          <div className="stats-row">
-            <div className="stat-box">
-              <div className="stat-value">{stats.totalDates}</div>
-              <div className="stat-label">Dates</div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-value">{stats.feedbackGiven}</div>
-              <div className="stat-label">Rated</div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-value">
-                {drift?.currentDivergence
-                  ? `${(drift.currentDivergence.overall * 100).toFixed(0)}%`
-                  : '--'}
-              </div>
-              <div className="stat-label">Divergence</div>
-            </div>
-            <div className="stat-box">
-              <div className="stat-value">
-                {stats.avgSatisfaction != null
-                  ? `${(stats.avgSatisfaction * 10).toFixed(1)}`
-                  : '--'}
-              </div>
-              <div className="stat-label">Avg Rating</div>
-            </div>
+        <div className="stats-row">
+          <div className="stat-box">
+            <div className="stat-value">{dates.length}</div>
+            <div className="stat-label">Dates Rated</div>
           </div>
-        )}
+          <div className="stat-box">
+            <div className="stat-value">
+              {avgRating != null ? (avgRating * 10).toFixed(1) : '--'}
+            </div>
+            <div className="stat-label">Avg Rating</div>
+          </div>
+          <div className="stat-box">
+            <div className="stat-value">
+              {sayDoGap != null ? sayDoGap.toFixed(1) : '--'}
+            </div>
+            <div className="stat-label">Say-Do Gap</div>
+          </div>
+        </div>
 
         {/* Stated vs Revealed */}
         {stated && revealed && (
@@ -138,11 +150,11 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
           </div>
         )}
 
-        {/* Key Insights */}
-        {drift?.currentDivergence?.insights && drift.currentDivergence.insights.length > 0 && (
+        {/* Insights */}
+        {(insights.length > 0 || biggestGapValue > 0.1) && (
           <div className="card">
-            <div className="card-title">Key <em>insights</em></div>
-            {drift.currentDivergence.insights.map((insight, i) => (
+            <div className="card-title">What we <em>found</em></div>
+            {insights.map((insight, i) => (
               <div
                 key={i}
                 className={`insight-card ${i === 0 ? 'insight-warning' : 'insight-info'}`}
@@ -150,16 +162,12 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
                 {insight}
               </div>
             ))}
-          </div>
-        )}
-
-        {/* Summary Insights */}
-        {summary?.insights && summary.insights.length > 0 && (
-          <div className="card">
-            <div className="card-title">Summary</div>
-            {summary.insights.map((insight, i) => (
-              <div key={i} className="insight-card insight-success">{insight}</div>
-            ))}
+            {biggestGapDim && biggestGapValue > 0.1 && !insights.some(ins => ins.toLowerCase().includes(biggestGapDim)) && (
+              <div className="insight-card insight-info">
+                Your biggest gap is in <strong>{biggestGapDim}</strong>: a {(biggestGapValue * 10).toFixed(1)}-point
+                difference between what you said and how you actually rated.
+              </div>
+            )}
           </div>
         )}
 
@@ -209,35 +217,6 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
           );
         })}
 
-        {/* Preference Drift */}
-        {drift?.history && drift.history.length > 0 && (
-          <div className="card">
-            <div className="card-title">Preference <em>drift</em></div>
-            <p className="card-subtitle">
-              How your stated vs revealed gap changes over time
-            </p>
-            <div className="bar-chart" style={{ height: 100 }}>
-              {drift.history.slice(-15).map((h, i) => {
-                const maxDiv = Math.max(...drift.history.map(x => x.divergenceScore), 0.5);
-                const height = Math.max((h.divergenceScore / maxDiv) * 80, 4);
-                const isHigh = h.divergenceScore > 0.2;
-                return (
-                  <div key={i} className="bar-col">
-                    <div
-                      className="bar-fill"
-                      style={{
-                        height,
-                        background: isHigh ? 'var(--warning)' : 'var(--accent)',
-                      }}
-                    />
-                    <div className="bar-label">#{h.feedbackCount}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* How it works */}
         <div className="card">
           <button
@@ -250,18 +229,64 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
             <span className={`arrow ${howItWorksOpen ? 'open' : ''}`}>&#9660;</span>
           </button>
           {howItWorksOpen && (
-            <div style={{ marginTop: 16 }}>
-              <p className="card-subtitle" style={{ marginBottom: 12 }}>
-                This system tracks what you <em>say</em> you want (stated preferences) and compares
-                it to what you <em>actually</em> respond to in dates (revealed preferences).
-                The gap between these two vectors reveals how self-aware you are about your own
-                dating patterns.
-              </p>
-              <p className="card-subtitle" style={{ marginBottom: 0 }}>
-                The divergence score measures this gap. A high divergence means your actions
-                don&apos;t match your words — and that&apos;s where the most interesting
-                insights live.
-              </p>
+            <div className="how-it-works-content">
+              <div className="hiw-section">
+                <div className="hiw-label">Preference vectors</div>
+                <p>
+                  Your preferences are represented as a 5-dimensional vector: conversation quality,
+                  emotional connection, shared interests, chemistry, and values alignment. Each
+                  dimension is scored from 0 to 1. When you set sliders, that becomes your
+                  <strong> stated</strong> preference vector.
+                </p>
+              </div>
+
+              <div className="hiw-section">
+                <div className="hiw-label">Signal extraction</div>
+                <p>
+                  Every time you rate a date, the system extracts a signal from your scores.
+                  Each dimension is weighted against your overall rating using the formula:
+                </p>
+                <div className="hiw-formula">
+                  importance = score × (1 - |score - overallRating|)
+                </div>
+                <p>
+                  If you gave someone a high overall score and also scored them high on chemistry,
+                  that tells the system chemistry genuinely matters to you. Dimensions that diverge
+                  from your overall rating are discounted.
+                </p>
+              </div>
+
+              <div className="hiw-section">
+                <div className="hiw-label">Adaptive learning (EMA)</div>
+                <p>
+                  Extracted signals update your <strong>revealed</strong> preferences using an
+                  Exponential Moving Average:
+                </p>
+                <div className="hiw-formula">
+                  revealed = old × (1 - α) + signal × α
+                </div>
+                <p>
+                  The learning rate α adapts over time:
+                </p>
+                <div className="hiw-formula">
+                  α = 0.05 + 0.25 × e<sup>-0.15 × feedbackCount</sup>
+                </div>
+                <p>
+                  Your first few dates have outsized influence (α ≈ 0.30), while later dates
+                  fine-tune rather than overwrite your profile (α → 0.05).
+                </p>
+              </div>
+
+              <div className="hiw-section">
+                <div className="hiw-label">Say-Do Gap (divergence)</div>
+                <p>
+                  The gap between stated and revealed vectors is measured using cosine distance:
+                  1 - cos(θ), where θ is the angle between the two vectors. A small gap means you
+                  know yourself well. A large gap means your dating behavior tells a different story
+                  than your words. Per-dimension gaps above 0.2 trigger specific insights about where
+                  your self-perception diverges from your actions.
+                </p>
+              </div>
             </div>
           )}
         </div>
