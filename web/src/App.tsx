@@ -1,28 +1,34 @@
 import { useState } from 'react';
-import DatesTab from './components/DatesTab';
-import FeedbackTab from './components/FeedbackTab';
+import HomeTab from './components/HomeTab';
 import InsightsTab from './components/InsightsTab';
+import FeedbackTab from './components/FeedbackTab';
 import ProfileTab from './components/ProfileTab';
 
-type Tab = 'dates' | 'feedback' | 'insights' | 'profile';
+type Tab = 'home' | 'insights' | 'feedback' | 'explore';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'dates', label: 'Dates', icon: '💜' },
-  { id: 'feedback', label: 'Feedback', icon: '💬' },
+  { id: 'home', label: 'Home', icon: '🏠' },
   { id: 'insights', label: 'Insights', icon: '📊' },
-  { id: 'profile', label: 'Profile', icon: '👤' },
+  { id: 'feedback', label: 'Feedback', icon: '💬' },
+  { id: 'explore', label: 'Explore', icon: '🔍' },
 ];
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('dates');
+  const [tab, setTab] = useState<Tab>('home');
+  const [hasData, setHasData] = useState(false);
 
   return (
     <div className="app-container">
       <div className="tab-content">
-        {tab === 'dates' && <DatesTab />}
-        {tab === 'feedback' && <FeedbackTab />}
+        {tab === 'home' && (
+          <HomeTab
+            onDataReady={() => { setHasData(true); setTab('insights'); }}
+            hasData={hasData}
+          />
+        )}
         {tab === 'insights' && <InsightsTab />}
-        {tab === 'profile' && <ProfileTab />}
+        {tab === 'feedback' && <FeedbackTab />}
+        {tab === 'explore' && <ProfileTab />}
       </div>
       <nav className="tab-bar">
         {TABS.map((t) => (

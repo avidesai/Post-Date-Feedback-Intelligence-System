@@ -1,5 +1,5 @@
-export type Dimension = 'conversation' | 'emotional' | 'interests' | 'chemistry' | 'values';
 export type PreferenceVector = [number, number, number, number, number];
+export type Dimension = 'conversation' | 'emotional' | 'interests' | 'chemistry' | 'values';
 
 export const DIMENSIONS: Dimension[] = ['conversation', 'emotional', 'interests', 'chemistry', 'values'];
 export const DIMENSION_LABELS: Record<Dimension, string> = {
@@ -14,6 +14,7 @@ export interface User {
   id: string;
   name: string;
   age: number;
+  gender: string;
   bio: string;
   statedPreferences: PreferenceVector;
   revealedPreferences: PreferenceVector;
@@ -26,27 +27,30 @@ export interface DateRecord {
   id: string;
   userAId: string;
   userBId: string;
+  venueName: string | null;
+  dateAt: string;
+  createdAt: string;
+  // joined fields from the dates route
   userAName?: string;
   userBName?: string;
-  venue: string;
-  dateTimestamp: string;
-  notes: string;
-  createdAt: string;
 }
 
 export interface Feedback {
   id: string;
   dateId: string;
-  reviewerId: string;
-  reviewedId: string;
+  fromUserId: string;
+  aboutUserId: string;
   overallRating: number;
   conversationScore: number;
   emotionalScore: number;
   interestsScore: number;
   chemistryScore: number;
   valuesScore: number;
-  textFeedback: string;
-  extractedInsights: string;
+  bestPart: string | null;
+  worstPart: string | null;
+  chemistryText: string | null;
+  rawText: string | null;
+  llmExtracted: boolean;
   createdAt: string;
 }
 
@@ -57,32 +61,52 @@ export interface CompatibilityScore {
   score: number;
   aToBScore: number;
   bToAScore: number;
-  dimensionScores: Record<Dimension, { aToB: number; bToA: number }>;
-  blendWeight: number;
+  dimensionScores: Record<string, { aToB: number; bToA: number }>;
   computedAt: string;
 }
 
-export interface PreferenceSnapshot {
-  id: string;
-  userId: string;
-  stated: PreferenceVector;
-  revealed: PreferenceVector;
-  divergenceScore: number;
-  feedbackCount: number;
-  recordedAt: string;
+export interface SimulationResult {
+  round: number;
+  averageCompatibility: number;
+  averageDivergence: number;
+  matchQualityImprovement: number;
+  pairings: Array<{ userAId: string; userBId: string; score: number }>;
 }
 
 export interface DivergenceResult {
   overall: number;
   perDimension: Record<Dimension, number>;
   insights: string[];
-  stated: PreferenceVector;
-  revealed: PreferenceVector;
 }
 
-export interface SimulationResult {
-  round: number;
-  pairings: number;
-  avgCompatibility: number;
-  avgDivergence: number;
+export interface PreferenceDriftData {
+  userId: string;
+  currentDivergence: DivergenceResult;
+  history: Array<{
+    feedbackCount: number;
+    divergenceScore: number;
+    stated: PreferenceVector;
+    revealed: PreferenceVector;
+    recordedAt: string;
+  }>;
+}
+
+export interface UserSummary {
+  user: {
+    id: string;
+    name: string;
+    feedbackCount: number;
+    statedPreferences: PreferenceVector;
+    revealedPreferences: PreferenceVector;
+    qualityProfile: PreferenceVector;
+  };
+  stats: {
+    totalDates: number;
+    feedbackGiven: number;
+    feedbackReceived: number;
+    avgSatisfaction: number | null;
+    avgRatingReceived: number | null;
+  };
+  divergence: DivergenceResult | null;
+  insights: string[];
 }

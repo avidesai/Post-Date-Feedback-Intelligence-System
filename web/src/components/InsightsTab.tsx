@@ -15,20 +15,25 @@ export default function InsightsTab() {
         <h1 className="page-header">Insights</h1>
         <div className="empty-state">
           <div className="empty-state-icon">📊</div>
-          <p>No users yet. Run a simulation from the Profile tab first.</p>
+          <p>No users yet. Go to Home and run the demo simulation first.</p>
         </div>
       </div>
     );
   }
 
-  const userId = selectedUser || users[0]?.id;
+  // sort users by feedback count (most interesting ones first)
+  const sorted = [...users].sort((a, b) => b.feedbackCount - a.feedbackCount);
+  const userId = selectedUser || sorted[0]?.id;
 
   return (
     <div>
       <h1 className="page-header">Insights</h1>
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+        Pick a user to see their stated vs revealed preference gap
+      </p>
 
       <div className="user-chips">
-        {users.map((u) => (
+        {sorted.map((u) => (
           <button
             key={u.id}
             className={`user-chip ${userId === u.id ? 'active' : ''}`}
@@ -53,40 +58,59 @@ function UserInsights({ userId, users }: { userId: string; users: User[] }) {
   );
 
   const user = users.find(u => u.id === userId);
-  if (driftLoading || summaryLoading) return <div className="loading"><div className="spinner" /> Loading insights...</div>;
+
+  if (driftLoading || summaryLoading) {
+    return <div className="loading"><div className="spinner" /> Loading insights...</div>;
+  }
 
   return (
     <div>
-      {/* stats */}
+      {/* user header */}
       {user && (
-        <div className="stats-row">
-          <div className="stat-box">
-            <div className="stat-value">{user.feedbackCount}</div>
-            <div className="stat-label">Feedback Given</div>
-          </div>
-          <div className="stat-box">
-            <div className="stat-value">
-              {drift?.divergence ? (drift.divergence.overall * 100).toFixed(0) + '%' : '--'}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div className="date-avatar">{user.name[0]}</div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>{user.name}, {user.age}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{user.bio || 'No bio'}</div>
             </div>
-            <div className="stat-label">Divergence</div>
           </div>
-          <div className="stat-box">
-            <div className="stat-value">
-              {summary?.recentFeedback?.length || 0}
+
+          <div className="stats-row">
+            <div className="stat-box">
+              <div className="stat-value">{summary?.stats?.feedbackGiven || user.feedbackCount}</div>
+              <div className="stat-label">Feedback Given</div>
             </div>
-            <div className="stat-label">Reviews</div>
+            <div className="stat-box">
+              <div className="stat-value">{summary?.stats?.totalDates || 0}</div>
+              <div className="stat-label">Dates</div>
+            </div>
+            <div className="stat-box">
+              <div className="stat-value">
+                {drift?.currentDivergence ? `${(drift.currentDivergence.overall * 100).toFixed(0)}%` : '--'}
+              </div>
+              <div className="stat-label">Divergence</div>
+            </div>
+            <div className="stat-box">
+              <div className="stat-value">
+                {summary?.stats?.avgSatisfaction != null
+                  ? `${(summary.stats.avgSatisfaction * 100).toFixed(0)}%`
+                  : '--'}
+              </div>
+              <div className="stat-label">Avg Rating</div>
+            </div>
           </div>
         </div>
       )}
 
       {/* stated vs revealed */}
-      {drift?.divergence && (
+      {drift?.currentDivergence && (
         <div className="card">
           <div className="card-title">Stated vs Revealed Preferences</div>
-          <div className="legend" style={{ marginBottom: 12 }}>
+          <div className="legend" style={{ marginBottom: 12, marginTop: -4 }}>
             <div className="legend-item">
               <div className="legend-dot" style={{ background: 'var(--primary)' }} />
-              What you say
+              What they said
             </div>
             <div className="legend-item">
               <div className="legend-dot" style={{ background: 'var(--secondary)' }} />
@@ -94,16 +118,21 @@ function UserInsights({ userId, users }: { userId: string; users: User[] }) {
             </div>
           </div>
           {DIMENSIONS.map((dim, i) => {
-            const stated = drift.divergence.stated[i];
-            const revealed = drift.divergence.revealed[i];
+            const stated = user?.statedPreferences[i] ?? 0;
+            const revealed = user?.revealedPreferences[i] ?? 0;
             const diff = Math.abs(stated - revealed);
+            const hasDivergence = diff > 0.15;
             return (
               <div key={dim} className="dim-row">
                 <div className="dim-name" style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>{DIMENSION_LABELS[dim]}</span>
-                  {diff > 0.15 && (
-                    <span style={{ color: 'var(--warning)', fontWeight: 600, fontSize: 11 }}>
-                      {revealed > stated ? '+' : '-'}{(diff * 10).toFixed(1)}
+                  {hasDivergence && (
+                    <span style={{
+                      color: 'var(--warning)',
+                      fontWeight: 600,
+                      fontSize: 11,
+                    }}>
+                      {revealed > stated ? '↑' : '↓'} {(diff * 10).toFixed(1)} gap
                     </span>
                   )}
                 </div>
@@ -124,7 +153,7 @@ function UserInsights({ userId, users }: { userId: string; users: User[] }) {
         <div className="card">
           <div className="card-title">Divergence Over Time</div>
           <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 12 }}>
-            How different your stated vs revealed preferences are
+            How much stated vs revealed preferences differ after each feedback
           </p>
           <div className="bar-chart" style={{ height: 100 }}>
             {drift.history.slice(-15).map((h, i) => {
@@ -145,35 +174,30 @@ function UserInsights({ userId, users }: { userId: string; users: User[] }) {
               );
             })}
           </div>
-          {drift.history.length > 2 && (
-            <p style={{ fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', fontStyle: 'italic', marginTop: 8 }}>
-              {drift.history[drift.history.length - 1].divergenceScore < drift.history[Math.floor(drift.history.length / 2)].divergenceScore
-                ? 'Your self-awareness is improving'
-                : 'Still discovering what you actually want'}
-            </p>
-          )}
         </div>
       )}
 
       {/* insights */}
-      {drift?.divergence?.insights && drift.divergence.insights.length > 0 && (
+      {drift?.currentDivergence?.insights && drift.currentDivergence.insights.length > 0 && (
         <div className="card">
           <div className="card-title">Key Insights</div>
-          {drift.divergence.insights.map((insight, i) => (
-            <div key={i} className={`insight-card ${i === 0 ? 'insight-warning' : 'insight-info'}`}>
+          {drift.currentDivergence.insights.map((insight, i) => (
+            <div
+              key={i}
+              className={`insight-card ${i === 0 ? 'insight-warning' : 'insight-info'}`}
+            >
               {insight}
             </div>
           ))}
         </div>
       )}
 
-      {summary?.topInsights && summary.topInsights.length > 0 && (
+      {/* summary insights from the server */}
+      {summary?.insights && summary.insights.length > 0 && (
         <div className="card">
           <div className="card-title">Summary</div>
-          {summary.topInsights.map((insight, i) => (
-            <div key={i} className="insight-card insight-success">
-              {insight}
-            </div>
+          {summary.insights.map((insight, i) => (
+            <div key={i} className="insight-card insight-success">{insight}</div>
           ))}
         </div>
       )}
