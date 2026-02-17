@@ -116,6 +116,7 @@ export default function App() {
     setStep(newStep);
     if (newSession) setSession(newSession);
     saveSession(newStep, s);
+    window.scrollTo(0, 0);
   }, [session]);
 
   const handlePreferencesSubmit = async (prefs: PreferenceVector) => {

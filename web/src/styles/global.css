@@ -533,7 +533,15 @@ textarea::placeholder {
   text-align: center;
   max-width: 380px;
   line-height: 1.6;
-  margin-bottom: 36px;
+  margin-bottom: 28px;
+}
+
+.reveal-cta {
+  padding: 14px 36px;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 32px;
+  box-shadow: 0 2px 8px rgba(44, 36, 32, 0.15);
 }
 
 .reveal-card {

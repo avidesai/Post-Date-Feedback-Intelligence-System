@@ -64,6 +64,10 @@ export default function RevealScreen({ userId, statedPreferences, onContinue }: 
         We compared what you said matters to what your ratings actually show
       </p>
 
+      <button className="btn btn-primary reveal-cta" onClick={onContinue}>
+        Explore your results
+      </button>
+
       <div className="reveal-card">
         <div className="legend" style={{ marginBottom: 20 }}>
           <div className="legend-item">
@@ -136,10 +140,6 @@ export default function RevealScreen({ userId, statedPreferences, onContinue }: 
           </p>
         </div>
       )}
-
-      <button className="btn btn-primary" onClick={onContinue}>
-        Explore your results
-      </button>
     </div>
   );
 }
