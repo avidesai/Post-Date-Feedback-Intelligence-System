@@ -76,3 +76,14 @@ export const runSimulation = (config: { rounds: number }) =>
     method: 'POST',
     body: JSON.stringify(config),
   });
+
+// feedback about a user (what others said about them)
+export const getFeedbackAboutUser = (userId: string) =>
+  request<Feedback[]>(`/api/feedback/about/${userId}`);
+
+// run a single simulation round
+export const runSimulationRound = (config: { rounds: number }) =>
+  request<{ message: string; config: any; results: SimulationResult[] }>('/api/simulation/run', {
+    method: 'POST',
+    body: JSON.stringify(config),
+  });
