@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import * as api from '../api';
 import { DIMENSIONS, DIMENSION_LABELS, DIMENSION_TIPS } from '../types';
 import { getRecapQuestions } from '../data/questions';
@@ -38,7 +38,6 @@ function saveRatingIndex(userId: string, index: number) {
 export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
   const [currentIndex, setCurrentIndex] = useState(() => {
     const saved = loadRatingIndex(userId);
-    // Clamp to valid range
     return Math.min(saved, dates.length - 1);
   });
   const [mode, setMode] = useState<Mode>('chat');
@@ -47,31 +46,7 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
-  const [checkingProgress, setCheckingProgress] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const hasCheckedRef = useRef(false);
-
-  // On mount, check which dates already have feedback and skip them
-  useEffect(() => {
-    if (hasCheckedRef.current) return;
-    hasCheckedRef.current = true;
-
-    api.getFeedbackByUser(userId).then(feedback => {
-      const ratedDateIds = new Set(feedback.map(f => f.dateId));
-      const firstUnrated = dates.findIndex(d => !ratedDateIds.has(d.dateId));
-
-      if (firstUnrated === -1) {
-        // All dates already rated — skip to results
-        onComplete();
-      } else {
-        setCurrentIndex(firstUnrated);
-        saveRatingIndex(userId, firstUnrated);
-      }
-      setCheckingProgress(false);
-    }).catch(() => {
-      setCheckingProgress(false);
-    });
-  }, [userId, dates, onComplete]);
 
   // Warn before refresh/close during active rating
   useEffect(() => {
@@ -156,12 +131,6 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
       setSubmitting(false);
     }
   };
-
-  if (checkingProgress) {
-    return (
-      <div className="loading"><div className="spinner" /> Resuming...</div>
-    );
-  }
 
   return (
     <div className="rating-screen fade-up">

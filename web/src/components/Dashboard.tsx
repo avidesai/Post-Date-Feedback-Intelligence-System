@@ -216,15 +216,26 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
             <p>
               Your preferences are represented as a 5-dimensional vector: conversation quality,
               emotional connection, shared interests, chemistry, and values alignment. Each
-              dimension is scored from 0 to 1. When you set sliders or answer questions, that
-              becomes your <strong>stated</strong> preference vector.
+              dimension is scored from 0 to 1. When you describe what matters to you (via
+              conversation or sliders), an LLM extracts your <strong>stated</strong> preference
+              vector from your words.
+            </p>
+          </div>
+          <div className="hiw-section">
+            <div className="hiw-label">Natural language understanding</div>
+            <p>
+              When you talk about your dates conversationally, your words are analyzed by
+              GPT-4o-mini to extract structured scores across all 5 dimensions. The model reads
+              between the lines: "it was fine" registers as ~0.4, while "we talked for 4 hours
+              and I didn't notice" signals high conversation quality. It also pulls direct
+              quotes from your words as evidence for each dimension score.
             </p>
           </div>
           <div className="hiw-section">
             <div className="hiw-label">Signal extraction</div>
             <p>
-              Every time you rate a date, the system extracts a signal from your scores.
-              Each dimension is weighted against your overall rating using the formula:
+              Once dimension scores are extracted, the system computes what actually drives
+              your satisfaction. Each dimension is weighted against your overall rating:
             </p>
             <div className="hiw-formula">
               importance = score × (1 - |score - overallRating|)

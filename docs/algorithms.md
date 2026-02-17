@@ -1,5 +1,20 @@
 # Core Algorithms
 
+## NLP Extraction
+
+The most important piece. When someone casually talks about a date, GPT-4o-mini with Structured Outputs extracts:
+
+- 5 dimension scores (0-1 each)
+- Overall satisfaction (0-1)
+- Best part / worst part
+- Per-dimension snippets pulled from the users own words
+
+The model is calibrated with examples so it reads between the lines. "it was fine" maps to roughly 0.4, not 0.7. "we talked for 4 hours and I didnt even notice" signals high conversation quality. The system prompt includes calibration examples with expected scores so extraction is consistent.
+
+Same approach for stated preferences. User answers 6 questions about what they want, the LLM reads the transcript and outputs a 5-dimension preference vector weighted by how much emphasis they put on each thing.
+
+Both use Zod schemas as the structured output format, so the LLM output is type-safe and validated.
+
 ## Preference Learning
 
 The key insight: people are bad at knowing what they actually want in a partner. They'll say "I need someone who's intellectual" and then their feedback patterns show they consistently rate chemistry-heavy dates higher.
@@ -88,4 +103,4 @@ When divergence exceeds threshold on a dimension, the system generates a human-r
 - If stated > revealed: "You rate X as very important but your feedback suggests it matters less than you think"
 - If revealed > stated: "You only rated X as moderately important, but it actually shows up as a strong driver of your satisfaction"
 
-The insights are the most product-valuable output. Imagine a dating app telling you "hey, you keep saying you want deep conversations, but your happiest dates were actually the ones with the most chemistry." That kind of self-knowledge is genuinely useful.
+These insights are the most product-valuable output. Imagine a dating app telling you "hey, you keep saying you want deep conversations, but your happiest dates were the ones with the most chemistry." That kind of self-knowledge is genuinely useful.

@@ -167,8 +167,6 @@ export default function App() {
   };
 
   const handleStartOver = () => {
-    if (!window.confirm('Start over? Your current progress will be lost.')) return;
-    // Clear all saved state
     if (session?.userId) {
       localStorage.removeItem(`rating_progress_${session.userId}`);
     }
