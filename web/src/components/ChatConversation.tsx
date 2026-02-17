@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { useTTS } from '../hooks/useTTS';
+import VoiceOrb from './VoiceOrb';
 
 interface Message {
   role: 'ai' | 'user';
@@ -19,11 +21,13 @@ export default function ChatConversation({ questions, onComplete, processing, pr
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
   const [done, setDone] = useState(false);
+  const [aiSpeaking, setAiSpeaking] = useState(false);
   const transcriptRef = useRef<{ question: string; answer: string }[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const speech = useSpeechRecognition();
+  const tts = useTTS();
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -31,14 +35,16 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     }
   }, []);
 
-  // Show first question on mount
+  // Show and speak first question on mount
   useEffect(() => {
     setTyping(true);
     const t = setTimeout(() => {
       setMessages([{ role: 'ai', text: questions[0] }]);
       setTyping(false);
+      speakQuestion(questions[0]);
     }, 600);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questions]);
 
   // Scroll on new messages or speech transcript changes
@@ -46,12 +52,12 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     scrollToBottom();
   }, [messages, typing, speech.transcript, scrollToBottom]);
 
-  // Focus input when typing indicator clears (only if not listening)
+  // Focus input when AI finishes speaking (and not listening)
   useEffect(() => {
-    if (!typing && !done && !speech.isListening && inputRef.current) {
+    if (!typing && !done && !speech.isListening && !aiSpeaking && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [typing, done, speech.isListening]);
+  }, [typing, done, speech.isListening, aiSpeaking]);
 
   // Sync speech transcript into input field
   useEffect(() => {
@@ -60,9 +66,15 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     }
   }, [speech.transcript]);
 
+  const speakQuestion = async (text: string) => {
+    setAiSpeaking(true);
+    await tts.speak(text);
+    setAiSpeaking(false);
+  };
+
   const handleSend = () => {
     const text = input.trim();
-    if (!text || typing || done) return;
+    if (!text || typing || done || aiSpeaking) return;
 
     // Stop listening if active
     if (speech.isListening) {
@@ -92,6 +104,7 @@ export default function ChatConversation({ questions, onComplete, processing, pr
       setTimeout(() => {
         setMessages(prev => [...prev, { role: 'ai', text: questions[nextQ] }]);
         setTyping(false);
+        speakQuestion(questions[nextQ]);
       }, 500 + Math.random() * 400);
     }
   };
@@ -111,8 +124,41 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     }
   };
 
+  const toggleMute = () => {
+    if (tts.isSpeaking) {
+      tts.stop();
+      setAiSpeaking(false);
+    }
+    tts.setEnabled(!tts.enabled);
+  };
+
   return (
     <div className="chat-container">
+      {/* Voice orb + mute toggle */}
+      <div className="chat-voice-header">
+        <VoiceOrb active={aiSpeaking} />
+        <button
+          className={`mute-btn ${!tts.enabled ? 'muted' : ''}`}
+          onClick={toggleMute}
+          title={tts.enabled ? 'Mute AI voice' : 'Unmute AI voice'}
+          type="button"
+        >
+          {tts.enabled ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+            </svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <line x1="23" y1="9" x2="17" y2="15" />
+              <line x1="17" y1="9" x2="23" y2="15" />
+            </svg>
+          )}
+        </button>
+      </div>
+
       <div className="chat-messages" ref={scrollRef}>
         {messages.map((msg, i) => (
           <div key={i} className={`chat-bubble chat-${msg.role}`}>
@@ -152,16 +198,20 @@ export default function ChatConversation({ questions, onComplete, processing, pr
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={speech.isListening ? 'Speak now...' : 'Type your answer...'}
+            placeholder={
+              aiSpeaking ? 'AI is speaking...'
+              : speech.isListening ? 'Speak now...'
+              : 'Type your answer...'
+            }
             rows={1}
-            disabled={typing}
+            disabled={typing || aiSpeaking}
           />
           <div className="chat-actions">
             {speech.isSupported && (
               <button
                 className={`chat-mic ${speech.isListening ? 'active' : ''}`}
                 onClick={toggleMic}
-                disabled={typing || done}
+                disabled={typing || done || aiSpeaking}
                 type="button"
                 title={speech.isListening ? 'Stop listening' : 'Speak your answer'}
               >
@@ -182,7 +232,7 @@ export default function ChatConversation({ questions, onComplete, processing, pr
             <button
               className="chat-send"
               onClick={handleSend}
-              disabled={!input.trim() || typing}
+              disabled={!input.trim() || typing || aiSpeaking}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13" />
