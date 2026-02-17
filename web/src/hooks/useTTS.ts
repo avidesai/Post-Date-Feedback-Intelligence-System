@@ -18,9 +18,13 @@ export function useTTS(): UseTTSReturn {
   const blobUrlRef = useRef<string | null>(null);
   const cacheRef = useRef<Map<string, Blob>>(new Map());
   const pendingRef = useRef<Map<string, Promise<Blob | null>>>(new Map());
+  // Generation counter: incremented on every speak/stop call.
+  // Any in-flight speak whose id doesn't match is stale and must not play.
+  const speakIdRef = useRef(0);
 
   useEffect(() => {
     return () => {
+      speakIdRef.current++;
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -61,9 +65,11 @@ export function useTTS(): UseTTSReturn {
   }, []);
 
   const stop = useCallback(() => {
+    speakIdRef.current++; // invalidate any in-flight speak calls
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
     setIsSpeaking(false);
   }, []);
@@ -76,9 +82,19 @@ export function useTTS(): UseTTSReturn {
   const speak = useCallback(async (text: string): Promise<void> => {
     if (!enabled) return;
 
-    stop();
+    // Claim a unique id and kill anything currently playing
+    const id = ++speakIdRef.current;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    setIsSpeaking(false);
 
     const blob = await fetchAudio(text);
+
+    // After the async gap: if stop() or another speak() ran, our id is stale
+    if (speakIdRef.current !== id) return;
     if (!blob) return;
 
     if (blobUrlRef.current) {
@@ -95,20 +111,19 @@ export function useTTS(): UseTTSReturn {
 
     await new Promise<void>((resolve) => {
       audio.onended = () => {
-        setIsSpeaking(false);
+        if (speakIdRef.current === id) setIsSpeaking(false);
         resolve();
       };
       audio.onerror = () => {
-        setIsSpeaking(false);
+        if (speakIdRef.current === id) setIsSpeaking(false);
         resolve();
       };
       audio.play().catch(() => {
-        // Autoplay blocked - silently skip
-        setIsSpeaking(false);
+        if (speakIdRef.current === id) setIsSpeaking(false);
         resolve();
       });
     });
-  }, [enabled, stop, fetchAudio]);
+  }, [enabled, fetchAudio]);
 
   return { isSpeaking, speak, prefetch, stop, enabled, setEnabled };
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import * as api from '../api';
 import { DIMENSIONS, DIMENSION_LABELS, DIMENSION_TIPS } from '../types';
 import { getRecapQuestions } from '../data/questions';
@@ -58,6 +58,12 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
 
   const date = dates[currentIndex];
   const isLast = currentIndex === dates.length - 1;
+
+  // Memoize questions so the array reference stays stable across re-renders
+  // for the same date. Without this, every re-render (e.g. setSubmitting(true))
+  // creates a new array, which re-triggers ChatConversation's init effect,
+  // causing it to replay the first question and speak it aloud.
+  const questions = useMemo(() => getRecapQuestions(date.otherName), [date.otherName]);
 
   const advance = () => {
     if (isLast) {
@@ -169,7 +175,7 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
         <>
           <ChatConversation
             key={date.dateId}
-            questions={getRecapQuestions(date.otherName)}
+            questions={questions}
             onComplete={handleChatComplete}
             processing={submitting}
             processingText="Processing your feedback..."

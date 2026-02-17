@@ -29,6 +29,7 @@ export default function ChatConversation({ questions, onComplete, processing, pr
 
   const speech = useSpeechRecognition();
   const tts = useTTS();
+  const didInitRef = useRef(false);
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -36,7 +37,12 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     }
   }, []);
 
+  // Init effect: show first question and speak it. Must only run ONCE per mount.
+  // The guard ref prevents re-firing if the questions array reference changes
+  // due to parent re-renders (e.g. submitting state changes).
   useEffect(() => {
+    if (didInitRef.current) return;
+    didInitRef.current = true;
     tts.prefetch(questions[0]);
     setTyping(true);
     const t = setTimeout(() => {
