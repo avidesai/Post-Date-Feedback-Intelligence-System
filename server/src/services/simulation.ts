@@ -4,7 +4,6 @@ import * as models from '../db/models';
 import { seedDatabase } from '../db/seed';
 import { computeCompatibility, computeAndRecordCompatibility } from './compatibility';
 import { updatePreferencesFromFeedback } from './preference-learning';
-import { generateFeedbackText } from './llm';
 import { clamp, cosineDistance } from './vector-math';
 
 // "true" revealed preferences for simulation users
@@ -102,10 +101,10 @@ export function seedSimulation(): { usersCreated: number } {
 // 2. generate feedback for each pair
 // 3. update preference vectors
 // 4. compute compatibility scores
-export async function runSimulationRound(
+export function runSimulationRound(
   round: number,
   useCompatibilityPairing: boolean = false
-): Promise<SimulationResult> {
+): SimulationResult {
   const users = models.getAllUsers();
   if (users.length < 2) {
     return {
@@ -144,23 +143,6 @@ export async function runSimulationRound(
 
     // simulate A's feedback about B
     const feedbackAB = simulateFeedbackScores(userA, userB, truePrefsA);
-    let rawTextA: string | undefined;
-    try {
-      rawTextA = await generateFeedbackText(
-        {
-          conversation: feedbackAB.scores[0],
-          emotional: feedbackAB.scores[1],
-          interests: feedbackAB.scores[2],
-          chemistry: feedbackAB.scores[3],
-          values: feedbackAB.scores[4],
-          overall: feedbackAB.overall,
-        },
-        userA.name,
-        userB.name
-      );
-    } catch {
-      // its fine if text gen fails
-    }
 
     const fbA = models.createFeedback({
       dateId: dateRecord.id,
@@ -172,7 +154,6 @@ export async function runSimulationRound(
       interestsScore: feedbackAB.scores[2],
       chemistryScore: feedbackAB.scores[3],
       valuesScore: feedbackAB.scores[4],
-      rawText: rawTextA,
     });
 
     // refresh user objects from db before updating
@@ -182,23 +163,6 @@ export async function runSimulationRound(
 
     // simulate B's feedback about A
     const feedbackBA = simulateFeedbackScores(userB, userA, truePrefsB);
-    let rawTextB: string | undefined;
-    try {
-      rawTextB = await generateFeedbackText(
-        {
-          conversation: feedbackBA.scores[0],
-          emotional: feedbackBA.scores[1],
-          interests: feedbackBA.scores[2],
-          chemistry: feedbackBA.scores[3],
-          values: feedbackBA.scores[4],
-          overall: feedbackBA.overall,
-        },
-        userB.name,
-        userA.name
-      );
-    } catch {
-      // same
-    }
 
     const fbB = models.createFeedback({
       dateId: dateRecord.id,
@@ -210,7 +174,6 @@ export async function runSimulationRound(
       interestsScore: feedbackBA.scores[2],
       chemistryScore: feedbackBA.scores[3],
       valuesScore: feedbackBA.scores[4],
-      rawText: rawTextB,
     });
 
     const freshB2 = models.getUser(userB.id)!;
@@ -251,24 +214,18 @@ export async function runSimulationRound(
 }
 
 // run the full simulation: seed + multiple rounds
-export async function runFullSimulation(config: SimulationConfig): Promise<SimulationResult[]> {
+export function runFullSimulation(config: SimulationConfig): SimulationResult[] {
   // seed fresh data
   seedSimulation();
 
   const results: SimulationResult[] = [];
 
   for (let round = 0; round < config.rounds; round++) {
-    // run multiple iterations per round
-    let lastResult: SimulationResult | null = null;
-    for (let iter = 0; iter < config.iterationsPerRound; iter++) {
-      lastResult = await runSimulationRound(
-        round,
-        round > 0 // use compatibility pairing after first round
-      );
-    }
-    if (lastResult) {
-      results.push(lastResult);
-    }
+    const result = runSimulationRound(
+      round,
+      round > 0 // use compatibility pairing after first round
+    );
+    results.push(result);
   }
 
   // calculate improvement relative to round 0

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApi } from '../hooks';
 import * as api from '../api';
-import type { User } from '../types';
+import type { User, PreferenceVector } from '../types';
 import { DIMENSIONS, DIMENSION_LABELS } from '../types';
 
 export default function ProfileTab() {
@@ -24,7 +24,7 @@ export default function ProfileTab() {
 
   const sorted = [...users].sort((a, b) => b.feedbackCount - a.feedbackCount);
   const userId = selectedUser || sorted[0]?.id;
-  const user = sorted.find(u => u.id === userId);
+  const user = users.find(u => u.id === userId);
 
   return (
     <div>
@@ -45,28 +45,32 @@ export default function ProfileTab() {
         ))}
       </div>
 
-      {user && <UserProfile user={user} onUpdate={refetchUsers} />}
+      {user && <UserProfile key={user.id} user={user} onUpdate={refetchUsers} />}
     </div>
   );
 }
 
 function UserProfile({ user, onUpdate }: { user: User; onUpdate: () => void }) {
-  const [prefs, setPrefs] = useState(user.statedPreferences);
+  const [prefs, setPrefs] = useState<PreferenceVector>([...user.statedPreferences] as PreferenceVector);
   const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
-  // reset prefs when user changes
-  if (prefs !== user.statedPreferences && !saving) {
-    // only reset if the user actually changed (check by id stored in a ref would be better
-    // but this is good enough for a demo)
-  }
+  // reset prefs when user changes (key prop handles remount, but just in case)
+  useEffect(() => {
+    setPrefs([...user.statedPreferences] as PreferenceVector);
+    setSaveMsg(null);
+  }, [user.id]);
 
   async function handleSave() {
     setSaving(true);
+    setSaveMsg(null);
     try {
       await api.updatePreferences(user.id, prefs);
+      setSaveMsg('Saved!');
       onUpdate();
+      setTimeout(() => setSaveMsg(null), 2000);
     } catch (e: any) {
-      alert('Save failed: ' + e.message);
+      setSaveMsg('Error: ' + e.message);
     } finally {
       setSaving(false);
     }
@@ -113,7 +117,7 @@ function UserProfile({ user, onUpdate }: { user: User; onUpdate: () => void }) {
               step={0.05}
               value={prefs[i]}
               onChange={(e) => {
-                const next = [...prefs] as typeof prefs;
+                const next = [...prefs] as PreferenceVector;
                 next[i] = parseFloat(e.target.value);
                 setPrefs(next);
               }}
@@ -129,6 +133,17 @@ function UserProfile({ user, onUpdate }: { user: User; onUpdate: () => void }) {
         >
           {saving ? 'Saving...' : 'Update Preferences'}
         </button>
+        {saveMsg && (
+          <div style={{
+            textAlign: 'center',
+            marginTop: 8,
+            fontSize: 13,
+            fontWeight: 500,
+            color: saveMsg.startsWith('Error') ? '#dc2626' : 'var(--success)',
+          }}>
+            {saveMsg}
+          </div>
+        )}
       </div>
 
       {/* all three vectors side by side */}
@@ -148,16 +163,34 @@ function UserProfile({ user, onUpdate }: { user: User; onUpdate: () => void }) {
               </tr>
             </thead>
             <tbody>
-              {DIMENSIONS.map((dim, i) => (
-                <tr key={dim} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                  <td style={{ padding: '6px 0', color: 'var(--text-secondary)' }}>{DIMENSION_LABELS[dim]}</td>
-                  <td style={{ textAlign: 'center', padding: '6px 4px' }}>{(user.statedPreferences[i] * 10).toFixed(1)}</td>
-                  <td style={{ textAlign: 'center', padding: '6px 4px' }}>{(user.revealedPreferences[i] * 10).toFixed(1)}</td>
-                  <td style={{ textAlign: 'center', padding: '6px 4px' }}>{(user.qualityProfile[i] * 10).toFixed(1)}</td>
-                </tr>
-              ))}
+              {DIMENSIONS.map((dim, i) => {
+                const stated = user.statedPreferences[i];
+                const revealed = user.revealedPreferences[i];
+                const diff = Math.abs(stated - revealed);
+                return (
+                  <tr key={dim} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                    <td style={{ padding: '6px 0', color: 'var(--text-secondary)' }}>{DIMENSION_LABELS[dim]}</td>
+                    <td style={{ textAlign: 'center', padding: '6px 4px' }}>{(stated * 10).toFixed(1)}</td>
+                    <td style={{
+                      textAlign: 'center',
+                      padding: '6px 4px',
+                      fontWeight: diff > 0.15 ? 600 : 400,
+                      color: diff > 0.15 ? 'var(--warning)' : 'inherit',
+                    }}>
+                      {(revealed * 10).toFixed(1)}
+                    </td>
+                    <td style={{ textAlign: 'center', padding: '6px 4px' }}>{(user.qualityProfile[i] * 10).toFixed(1)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          <div className="legend" style={{ marginTop: 8 }}>
+            <div className="legend-item">
+              <div className="legend-dot" style={{ background: 'var(--warning)' }} />
+              Significant gap (stated vs revealed)
+            </div>
+          </div>
         </div>
       )}
     </div>

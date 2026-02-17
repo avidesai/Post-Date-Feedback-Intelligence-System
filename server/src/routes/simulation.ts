@@ -19,7 +19,7 @@ router.post('/seed', (_req, res) => {
 
 // POST /api/simulation/run
 // run a full simulation (seed + multiple rounds)
-router.post('/run', async (req, res) => {
+router.post('/run', (req, res) => {
   try {
     const parsed = simulationConfigSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -27,7 +27,7 @@ router.post('/run', async (req, res) => {
       return;
     }
 
-    const results = await runFullSimulation(parsed.data);
+    const results = runFullSimulation(parsed.data);
     res.json({
       message: 'Simulation complete',
       config: parsed.data,
@@ -41,11 +41,11 @@ router.post('/run', async (req, res) => {
 
 // POST /api/simulation/round
 // run a single round (doesnt re-seed)
-router.post('/round', async (req, res) => {
+router.post('/round', (req, res) => {
   try {
     const round = req.body.round || 0;
     const useCompatibilityPairing = req.body.useCompatibilityPairing || false;
-    const result = await runSimulationRound(round, useCompatibilityPairing);
+    const result = runSimulationRound(round, useCompatibilityPairing);
     res.json(result);
   } catch (err) {
     console.error('Round error:', err);
