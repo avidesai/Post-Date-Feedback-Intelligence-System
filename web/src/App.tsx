@@ -5,6 +5,7 @@ import PreferencesScreen from './components/PreferencesScreen';
 import DateRatingFlow from './components/DateRatingFlow';
 import RevealScreen from './components/RevealScreen';
 import Dashboard from './components/Dashboard';
+import HowItWorksModal from './components/HowItWorksModal';
 
 type Step = 'preferences' | 'rating' | 'reveal' | 'dashboard';
 
@@ -101,6 +102,7 @@ export default function App() {
   const [session, setSession] = useState<DemoSession | null>(initial.session);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hiwOpen, setHiwOpen] = useState(false);
 
   const goTo = useCallback((newStep: Step, newSession?: DemoSession) => {
     const s = newSession ?? session;
@@ -170,48 +172,53 @@ export default function App() {
     setStep('preferences');
   };
 
+  let content;
+
   if (step === 'preferences') {
-    return (
+    content = (
       <PreferencesScreen
         onSubmit={handlePreferencesSubmit}
         loading={loading}
         error={error}
       />
     );
-  }
-
-  if (step === 'rating' && session) {
-    return (
+  } else if (step === 'rating' && session) {
+    content = (
       <DateRatingFlow
         userId={session.userId}
         dates={session.dates}
         onComplete={handleRatingComplete}
       />
     );
-  }
-
-  if (step === 'reveal' && session) {
-    return (
+  } else if (step === 'reveal' && session) {
+    content = (
       <RevealScreen
         userId={session.userId}
         statedPreferences={session.statedPreferences}
         onContinue={handleRevealContinue}
       />
     );
-  }
-
-  if (step === 'dashboard' && session) {
-    return (
+  } else if (step === 'dashboard' && session) {
+    content = (
       <Dashboard
         userId={session.userId}
         dates={session.dates}
         onStartOver={handleStartOver}
       />
     );
+  } else {
+    content = (
+      <div className="loading"><div className="spinner" /> Loading...</div>
+    );
   }
 
-  // Fallback
   return (
-    <div className="loading"><div className="spinner" /> Loading...</div>
+    <>
+      <button className="hiw-trigger" onClick={() => setHiwOpen(true)}>
+        How it works
+      </button>
+      <HowItWorksModal open={hiwOpen} onClose={() => setHiwOpen(false)} />
+      {content}
+    </>
   );
 }

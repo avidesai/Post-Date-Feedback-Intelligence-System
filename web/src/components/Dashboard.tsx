@@ -33,7 +33,6 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
   );
 
   const [expandedDateId, setExpandedDateId] = useState<string | null>(null);
-  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
 
   const stated = user?.statedPreferences;
   const revealed = user?.revealedPreferences;
@@ -211,76 +210,59 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
 
         {/* How it works */}
         <div className="card">
-          <button
-            className="collapsible-trigger"
-            onClick={() => setHowItWorksOpen(!howItWorksOpen)}
-          >
-            <span className="card-title" style={{ marginBottom: 0 }}>
-              How this <em>works</em>
-            </span>
-            <span className={`arrow ${howItWorksOpen ? 'open' : ''}`}>&#9660;</span>
-          </button>
-          {howItWorksOpen && (
-            <div className="how-it-works-content">
-              <div className="hiw-section">
-                <div className="hiw-label">Preference vectors</div>
-                <p>
-                  Your preferences are represented as a 5-dimensional vector: conversation quality,
-                  emotional connection, shared interests, chemistry, and values alignment. Each
-                  dimension is scored from 0 to 1. When you set sliders, that becomes your
-                  <strong> stated</strong> preference vector.
-                </p>
-              </div>
-
-              <div className="hiw-section">
-                <div className="hiw-label">Signal extraction</div>
-                <p>
-                  Every time you rate a date, the system extracts a signal from your scores.
-                  Each dimension is weighted against your overall rating using the formula:
-                </p>
-                <div className="hiw-formula">
-                  importance = score × (1 - |score - overallRating|)
-                </div>
-                <p>
-                  If you gave someone a high overall score and also scored them high on chemistry,
-                  that tells the system chemistry genuinely matters to you. Dimensions that diverge
-                  from your overall rating are discounted.
-                </p>
-              </div>
-
-              <div className="hiw-section">
-                <div className="hiw-label">Adaptive learning (EMA)</div>
-                <p>
-                  Extracted signals update your <strong>revealed</strong> preferences using an
-                  Exponential Moving Average:
-                </p>
-                <div className="hiw-formula">
-                  revealed = old × (1 - α) + signal × α
-                </div>
-                <p>
-                  The learning rate α adapts over time:
-                </p>
-                <div className="hiw-formula">
-                  α = 0.05 + 0.25 × e<sup>-0.15 × feedbackCount</sup>
-                </div>
-                <p>
-                  Your first few dates have outsized influence (α ≈ 0.30), while later dates
-                  fine-tune rather than overwrite your profile (α → 0.05).
-                </p>
-              </div>
-
-              <div className="hiw-section">
-                <div className="hiw-label">Say-Do Gap (divergence)</div>
-                <p>
-                  The gap between stated and revealed vectors is measured using cosine distance:
-                  1 - cos(θ), where θ is the angle between the two vectors. A small gap means you
-                  know yourself well. A large gap means your dating behavior tells a different story
-                  than your words. Per-dimension gaps above 0.2 trigger specific insights about where
-                  your self-perception diverges from your actions.
-                </p>
-              </div>
+          <div className="card-title">How this <em>works</em></div>
+          <div className="hiw-section">
+            <div className="hiw-label">Preference vectors</div>
+            <p>
+              Your preferences are represented as a 5-dimensional vector: conversation quality,
+              emotional connection, shared interests, chemistry, and values alignment. Each
+              dimension is scored from 0 to 1. When you set sliders or answer questions, that
+              becomes your <strong>stated</strong> preference vector.
+            </p>
+          </div>
+          <div className="hiw-section">
+            <div className="hiw-label">Signal extraction</div>
+            <p>
+              Every time you rate a date, the system extracts a signal from your scores.
+              Each dimension is weighted against your overall rating using the formula:
+            </p>
+            <div className="hiw-formula">
+              importance = score × (1 - |score - overallRating|)
             </div>
-          )}
+            <p>
+              If you gave someone a high overall score and also scored them high on chemistry,
+              that tells the system chemistry genuinely matters to you. Dimensions that diverge
+              from your overall rating are discounted.
+            </p>
+          </div>
+          <div className="hiw-section">
+            <div className="hiw-label">Adaptive learning (EMA)</div>
+            <p>
+              Extracted signals update your <strong>revealed</strong> preferences using an
+              Exponential Moving Average:
+            </p>
+            <div className="hiw-formula">
+              revealed = old × (1 - α) + signal × α
+            </div>
+            <p>The learning rate α adapts over time:</p>
+            <div className="hiw-formula">
+              α = 0.05 + 0.25 × e<sup>-0.15 × feedbackCount</sup>
+            </div>
+            <p>
+              Your first few dates have outsized influence (α ≈ 0.30), while later dates
+              fine-tune rather than overwrite your profile (α → 0.05).
+            </p>
+          </div>
+          <div className="hiw-section">
+            <div className="hiw-label">Say-Do Gap (divergence)</div>
+            <p>
+              The gap between stated and revealed vectors is measured using cosine distance:
+              1 - cos(θ), where θ is the angle between the two vectors. A small gap means you
+              know yourself well. A large gap means your dating behavior tells a different story
+              than your words. Per-dimension gaps above 0.2 trigger specific insights about where
+              your self-perception diverges from your actions.
+            </p>
+          </div>
         </div>
 
         {/* Start over */}
