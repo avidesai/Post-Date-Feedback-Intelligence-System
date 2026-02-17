@@ -20,45 +20,66 @@ interface Props {
   onStartOver: () => void;
 }
 
-function generateDimensionInsights(
+interface EditorialInsight {
+  heading: [string, string, string]; // [before, italic, after]
+  quote: string;
+  imageUrl: string;
+}
+
+const INSIGHT_CONFIG: Record<Dimension, {
+  heading: [string, string, string];
+  imageUrl: string;
+  overvalued: string;
+  undervalued: string;
+}> = {
+  conversation: {
+    heading: ['The', 'conversation', ''],
+    imageUrl: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=260&fit=crop&auto=format',
+    overvalued: 'You think you need someone you can talk to for hours, but your happiest dates weren\'t always the chattiest ones. Sometimes the best connections happen in comfortable silence, not constant conversation.',
+    undervalued: 'You didn\'t think conversation mattered that much, but it keeps showing up in what makes your dates work. When the words flow easily, everything else seems to fall into place.',
+  },
+  emotional: {
+    heading: ['Emotional', 'depth', ''],
+    imageUrl: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=400&h=260&fit=crop&auto=format',
+    overvalued: 'You want deep emotional connection right away, but your best dates didn\'t always start there. Real intimacy might build more slowly than you expect, and that\'s OK.',
+    undervalued: 'You didn\'t rank emotional depth very high, but it\'s quietly shaping your experience. The dates where you felt genuinely seen and understood left a bigger impression than you\'d think.',
+  },
+  interests: {
+    heading: ['Shared', 'interests', ''],
+    imageUrl: 'https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=400&h=260&fit=crop&auto=format',
+    overvalued: 'Having things in common sounds perfect on paper, but your dates tell a different story. You connect with people over who they are, not just what they do on weekends.',
+    undervalued: 'You said shared interests don\'t matter much, but they keep showing up in your best dates. Having something in common gives you more to build on than you realized.',
+  },
+  chemistry: {
+    heading: ['The', 'spark', ''],
+    imageUrl: 'https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?w=400&h=260&fit=crop&auto=format',
+    overvalued: 'You say the spark is everything, but your actual satisfaction doesn\'t hinge on it as much. Chemistry catches your attention, but it\'s not what keeps it.',
+    undervalued: 'You downplay physical attraction, but it\'s shaping your experience more than you\'d admit. When the chemistry is there, it colors everything else.',
+  },
+  values: {
+    heading: ['Core', 'values', ''],
+    imageUrl: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&h=260&fit=crop&auto=format',
+    overvalued: 'You want someone perfectly aligned on the big life questions, but when the connection is strong, you\'re more flexible than you think. Alignment matters, but it\'s not the only thing.',
+    undervalued: 'Values didn\'t top your list, but they\'re quietly driving which dates feel right and which feel off. You care about the big picture more than you let on.',
+  },
+};
+
+function generateEditorialInsights(
   stated: PreferenceVector,
   revealed: PreferenceVector
-): string[] {
-  const GAP_THRESHOLD = 0.12;
-
-  const dims = DIMENSIONS.map((dim, i) => ({
-    dim, i,
-    gap: stated[i] - revealed[i],
-    absGap: Math.abs(stated[i] - revealed[i]),
-  }))
-    .filter(d => d.absGap > GAP_THRESHOLD)
-    .sort((a, b) => b.absGap - a.absGap);
-
-  const overvaluedTemplates = [
-    (label: string, s: string, r: string) =>
-      `You rate ${label} as ${s}/10 important, but your revealed preference is ${r}/10. This dimension might matter less to your actual happiness than you think.`,
-    (label: string, s: string, r: string) =>
-      `You say ${label} is a ${s}/10 priority, but your actual satisfaction doesn't depend on it as much (${r}/10). Maybe it isn't as make-or-break as you thought.`,
-    (label: string, s: string, r: string) =>
-      `${label} sits at ${s}/10 in your stated preferences but only ${r}/10 in practice. Your dates suggest this isn't driving your satisfaction the way you'd expect.`,
-  ];
-
-  const undervaluedTemplates = [
-    (label: string, s: string, r: string) =>
-      `You only rated ${label} as ${s}/10 important, but it actually shows up as ${r}/10 in your feedback. This might be a blind spot worth paying attention to.`,
-    (label: string, s: string, r: string) =>
-      `${label} registers at ${r}/10 in your dating behavior, even though you rated it ${s}/10. Looks like this matters to you more than you realized.`,
-    (label: string, s: string, r: string) =>
-      `You said ${label} was only a ${s}/10, but your actual ratings put it at ${r}/10. Your behavior is telling a different story than your words.`,
-  ];
-
-  return dims.map(({ dim, i, gap }, idx) => {
-    const sVal = (stated[i] * 10).toFixed(1);
-    const rVal = (revealed[i] * 10).toFixed(1);
-    const label = DIMENSION_LABELS[dim].toLowerCase();
-    const templates = gap > 0 ? overvaluedTemplates : undervaluedTemplates;
-    return templates[idx % templates.length](label, sVal, rVal);
-  });
+): EditorialInsight[] {
+  return DIMENSIONS
+    .map((dim, i) => ({ dim, i, gap: stated[i] - revealed[i], absGap: Math.abs(stated[i] - revealed[i]) }))
+    .filter(d => d.absGap > 0.12)
+    .sort((a, b) => b.absGap - a.absGap)
+    .map(({ dim, gap }) => {
+      const config = INSIGHT_CONFIG[dim];
+      return {
+        heading: config.heading,
+        quote: gap > 0 ? config.overvalued : config.undervalued,
+        imageUrl: config.imageUrl,
+      };
+    });
 }
 
 export default function Dashboard({ userId, dates, onStartOver }: Props) {
@@ -94,8 +115,8 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
     sayDoGap = (totalGap / DIMENSIONS.length) * 10;
   }
 
-  const dimensionInsights = stated && revealed
-    ? generateDimensionInsights(stated, revealed)
+  const editorialInsights = stated && revealed
+    ? generateEditorialInsights(stated, revealed)
     : [];
 
   return (
@@ -170,12 +191,25 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
           </div>
         )}
 
-        {dimensionInsights.length > 0 && (
+        {editorialInsights.length > 0 && (
           <>
             <div className="section-label">What we found</div>
-            {dimensionInsights.map((insight, i) => (
-              <div key={i} className="insight-card">
-                {insight}
+            {editorialInsights.map((insight, i) => (
+              <div key={i} className="editorial-card">
+                <h3 className="editorial-heading">
+                  {insight.heading[0]} <em>{insight.heading[1]}</em>{insight.heading[2] ? ` ${insight.heading[2]}` : ''}
+                </h3>
+                <p className="editorial-quote">
+                  &ldquo;{insight.quote}&rdquo;
+                </p>
+                <div className="editorial-image">
+                  <img
+                    src={insight.imageUrl}
+                    alt=""
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </div>
               </div>
             ))}
           </>

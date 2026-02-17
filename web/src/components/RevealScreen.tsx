@@ -124,11 +124,16 @@ export default function RevealScreen({ userId, statedPreferences, onContinue }: 
       </div>
 
       {maxGap > 0.1 && (
-        <div className="insight-card insight-warning" style={{ maxWidth: 440, width: '100%', marginBottom: 24 }}>
-          {statedMore
-            ? `You said ${biggestLabel} matters a lot, but your ratings tell a different story.`
-            : `Your dates reveal ${biggestLabel} matters more to you than you think.`
-          }
+        <div className="editorial-card" style={{ maxWidth: 440, width: '100%', marginBottom: 24 }}>
+          <h3 className="editorial-heading">
+            Your biggest <em>blind spot</em>
+          </h3>
+          <p className="editorial-quote">
+            &ldquo;{statedMore
+              ? `You think ${biggestLabel} is a top priority, but your dates suggest it's not driving your happiness as much as you believe. Your behavior tells a different story than your words.`
+              : `${biggestLabel.charAt(0).toUpperCase() + biggestLabel.slice(1)} is shaping your experience more than you realized. You didn't rank it highly, but your best dates had it.`
+            }&rdquo;
+          </p>
         </div>
       )}
 
