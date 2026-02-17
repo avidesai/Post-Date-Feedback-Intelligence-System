@@ -738,6 +738,7 @@ textarea::placeholder {
   color: var(--text);
   background: var(--surface);
   box-shadow: var(--shadow);
+  border-left: 3px solid var(--warning);
 }
 
 .insight-card strong {
@@ -752,7 +753,6 @@ textarea::placeholder {
 .insight-warning {
   background: var(--surface);
   color: var(--text);
-  border-left: 3px solid var(--warning);
 }
 
 .insight-success {

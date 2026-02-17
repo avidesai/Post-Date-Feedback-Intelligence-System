@@ -75,7 +75,28 @@ router.post('/transcribe', upload.single('audio'), async (req, res) => {
       language: 'en',
     });
 
-    res.json({ text: transcription.text });
+    // Filter Whisper hallucinations on silent/near-silent audio
+    const hallucinations = [
+      'thank you for watching',
+      'thanks for watching',
+      'thank you for listening',
+      'thanks for listening',
+      'bye bye',
+      'bye-bye',
+      'goodbye',
+      'thank you.',
+      'thanks.',
+      'you',
+      'the end',
+      'subscribe',
+      'like and subscribe',
+      'see you next time',
+      'see you in the next',
+    ];
+    const lower = transcription.text.trim().toLowerCase().replace(/[.!?,]/g, '');
+    const isHallucination = hallucinations.some(h => lower === h.replace(/[.!?,]/g, '') || lower.startsWith(h));
+
+    res.json({ text: isHallucination ? '' : transcription.text });
   } catch (err: any) {
     console.error('Transcription failed:', err);
     res.status(500).json({ error: 'Transcription failed' });

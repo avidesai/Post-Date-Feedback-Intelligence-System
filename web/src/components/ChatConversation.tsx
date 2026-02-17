@@ -25,6 +25,8 @@ export default function ChatConversation({ questions, onComplete, processing, pr
   const transcriptRef = useRef<{ question: string; answer: string }[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Track whether user is using keyboard so we don't fight with mic
+  const userIsTyping = useRef(false);
 
   const speech = useSpeechRecognition();
   const tts = useTTS();
@@ -53,12 +55,13 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     scrollToBottom();
   }, [messages, typing, speech.transcript, speech.isTranscribing, scrollToBottom]);
 
-  // Auto-start mic when AI finishes speaking
+  // Auto-start mic when AI finishes speaking (only if user isn't typing)
   useEffect(() => {
-    if (!aiSpeaking && !typing && !done && !speech.isListening && !speech.isTranscribing) {
-      // Small delay so the transition feels natural
+    if (!aiSpeaking && !typing && !done && !speech.isListening && !speech.isTranscribing && !userIsTyping.current) {
       const t = setTimeout(() => {
-        speech.start();
+        if (!userIsTyping.current) {
+          speech.start();
+        }
       }, 300);
       return () => clearTimeout(t);
     }
@@ -72,17 +75,14 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     }
   }, [speech.transcript]);
 
-  // Auto-send after transcription completes (voice stopped + text ready)
+  // Auto-send after voice transcription completes
   const pendingAutoSend = useRef(false);
   useEffect(() => {
-    // When listening stops, mark that we're waiting for transcription
     if (!speech.isListening && speech.isTranscribing) {
       pendingAutoSend.current = true;
     }
-    // When transcription finishes and we were waiting, auto-send
     if (pendingAutoSend.current && !speech.isListening && !speech.isTranscribing && speech.transcript) {
       pendingAutoSend.current = false;
-      // Trigger send on next tick so input state is synced
       setTimeout(() => {
         const sendBtn = document.querySelector('.chat-send') as HTMLButtonElement;
         if (sendBtn && !sendBtn.disabled) sendBtn.click();
@@ -116,6 +116,7 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     speech.reset();
+    pendingAutoSend.current = false;
 
     // Record in transcript
     transcriptRef.current.push({
@@ -129,8 +130,9 @@ export default function ChatConversation({ questions, onComplete, processing, pr
       setDone(true);
       onComplete(transcriptRef.current);
     } else {
-      // Prefetch next question's audio immediately
       tts.prefetch(questions[nextQ]);
+      // Reset typing flag for the next question
+      userIsTyping.current = false;
 
       setTyping(true);
       setCurrentQ(nextQ);
@@ -149,11 +151,24 @@ export default function ChatConversation({ questions, onComplete, processing, pr
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setInput(val);
+
+    // User is manually typing - stop the mic so it doesn't fight
+    if (!speech.transcript || val !== speech.transcript) {
+      userIsTyping.current = true;
+      if (speech.isListening) {
+        speech.reset();
+      }
+    }
+  };
+
   const toggleMic = () => {
     if (speech.isListening) {
       speech.stop();
     } else {
-      // Stop AI voice if speaking so mic can hear clearly
+      userIsTyping.current = false;
       if (aiSpeaking) {
         tts.stop();
         setAiSpeaking(false);
@@ -257,7 +272,7 @@ export default function ChatConversation({ questions, onComplete, processing, pr
               ref={inputRef}
               className="chat-input"
               value={input}
-              onChange={e => setInput(e.target.value)}
+              onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder={
                 speech.isListening ? 'Speak now...'

@@ -1,9 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 const BASE_URL = import.meta.env.VITE_API_URL || '';
-const SILENCE_TIMEOUT_MS = 3000;
+const CHUNK_INTERVAL_MS = 2500;    // send audio to Whisper every 2.5s
+const SILENCE_TIMEOUT_MS = 3000;   // auto-stop after 3s of silence
 const SILENCE_THRESHOLD = 0.01;
-const CHECK_INTERVAL_MS = 200;
+const LEVEL_CHECK_MS = 200;
 
 export interface UseSpeechRecognitionReturn {
   isSupported: boolean;
@@ -15,94 +16,146 @@ export interface UseSpeechRecognitionReturn {
   reset: () => void;
 }
 
+async function transcribeBlob(blob: Blob): Promise<string | null> {
+  try {
+    const formData = new FormData();
+    formData.append('audio', blob, 'recording.webm');
+    const res = await fetch(`${BASE_URL}/api/tts/transcribe`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.text || null;
+  } catch {
+    return null;
+  }
+}
+
 export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+
   const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const chunkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastSoundTimeRef = useRef(Date.now());
+  const lastSoundRef = useRef(Date.now());
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const stoppingRef = useRef(false);
+  const pendingTranscriptions = useRef(0);
+  const segmentsRef = useRef<string[]>([]);
 
   const isSupported = typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
 
-  // Clean up on unmount
   useEffect(() => {
-    return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
-      if (silenceTimerRef.current) {
-        clearInterval(silenceTimerRef.current);
-      }
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close();
-      }
-    };
+    return () => cleanup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const cleanupSilenceDetection = useCallback(() => {
-    if (silenceTimerRef.current) {
-      clearInterval(silenceTimerRef.current);
-      silenceTimerRef.current = null;
+  function cleanup() {
+    if (chunkTimerRef.current) clearInterval(chunkTimerRef.current);
+    if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
+    chunkTimerRef.current = null;
+    silenceTimerRef.current = null;
+    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+      try { recorderRef.current.stop(); } catch {}
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
     }
     if (audioCtxRef.current) {
       audioCtxRef.current.close();
       audioCtxRef.current = null;
     }
     analyserRef.current = null;
-  }, []);
+  }
 
-  const transcribeAudio = useCallback(async (blob: Blob) => {
+  // Harvest current chunks into a blob and send to Whisper
+  const harvestAndTranscribe = useCallback((isFinal: boolean) => {
+    if (chunksRef.current.length === 0) return;
+
+    const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+    // Keep chunks for the full recording (Whisper needs the WebM header from chunk 0)
+    // But we only transcribe the full accumulated audio each time
+    const segmentIndex = segmentsRef.current.length;
+
+    pendingTranscriptions.current++;
     setIsTranscribing(true);
-    try {
-      const formData = new FormData();
-      formData.append('audio', blob, 'recording.webm');
 
-      const res = await fetch(`${BASE_URL}/api/tts/transcribe`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        console.warn('Transcription failed:', res.status);
-        return;
+    transcribeBlob(blob).then(text => {
+      pendingTranscriptions.current--;
+      if (text) {
+        // Replace entire transcript with latest full transcription
+        // Since we're sending all accumulated audio each time, the latest result is the most complete
+        setTranscript(text);
+        // Track segment for final
+        if (segmentIndex >= segmentsRef.current.length) {
+          segmentsRef.current.push(text);
+        } else {
+          segmentsRef.current[segmentIndex] = text;
+        }
       }
-
-      const data = await res.json();
-      if (data.text) {
-        setTranscript(prev => prev ? prev + ' ' + data.text : data.text);
+      if (pendingTranscriptions.current <= 0) {
+        pendingTranscriptions.current = 0;
+        setIsTranscribing(false);
       }
-    } catch (err) {
-      console.warn('Transcription error:', err);
-    } finally {
-      setIsTranscribing(false);
-    }
+    });
   }, []);
 
   const stop = useCallback(() => {
-    cleanupSilenceDetection();
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
+    if (stoppingRef.current) return;
+    stoppingRef.current = true;
+
+    // Clear timers
+    if (chunkTimerRef.current) clearInterval(chunkTimerRef.current);
+    if (silenceTimerRef.current) clearInterval(silenceTimerRef.current);
+    chunkTimerRef.current = null;
+    silenceTimerRef.current = null;
+
+    // Stop recorder - this triggers ondataavailable for remaining data
+    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+      recorderRef.current.stop();
     }
+
+    // Clean up audio analysis
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close();
+      audioCtxRef.current = null;
+    }
+    analyserRef.current = null;
+
+    // Stop mic
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+
     setIsListening(false);
-  }, [cleanupSilenceDetection]);
+
+    // Do a final transcription with all data
+    // Small delay to let the final ondataavailable fire
+    setTimeout(() => {
+      harvestAndTranscribe(true);
+      stoppingRef.current = false;
+    }, 100);
+  }, [harvestAndTranscribe]);
 
   const start = useCallback(async () => {
     if (!isSupported) return;
+    stoppingRef.current = false;
+    segmentsRef.current = [];
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       chunksRef.current = [];
 
-      // Set up audio analysis for silence detection
+      // Audio analysis for silence detection
       const audioCtx = new AudioContext();
       audioCtxRef.current = audioCtx;
       const source = audioCtx.createMediaStreamSource(stream);
@@ -110,69 +163,63 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
       analyser.fftSize = 512;
       source.connect(analyser);
       analyserRef.current = analyser;
-      lastSoundTimeRef.current = Date.now();
+      lastSoundRef.current = Date.now();
 
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-          ? 'audio/webm;codecs=opus'
-          : 'audio/webm',
-      });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm';
 
-      mediaRecorder.ondataavailable = (e) => {
+      const recorder = new MediaRecorder(stream, { mimeType });
+
+      recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunksRef.current.push(e.data);
         }
       };
 
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        chunksRef.current = [];
-
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(t => t.stop());
-          streamRef.current = null;
-        }
-
-        if (blob.size > 0) {
-          transcribeAudio(blob);
-        }
-      };
-
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start();
+      recorderRef.current = recorder;
+      // Use timeslice to get data frequently
+      recorder.start(500);
       setIsListening(true);
 
-      // Monitor audio levels for silence detection
+      // Periodically send accumulated audio to Whisper for live transcription
+      chunkTimerRef.current = setInterval(() => {
+        if (chunksRef.current.length > 0 && !stoppingRef.current) {
+          harvestAndTranscribe(false);
+        }
+      }, CHUNK_INTERVAL_MS);
+
+      // Silence detection
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       silenceTimerRef.current = setInterval(() => {
         if (!analyserRef.current) return;
         analyserRef.current.getByteFrequencyData(dataArray);
-
-        // Calculate average volume
         let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-          sum += dataArray[i];
-        }
+        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
         const avg = sum / dataArray.length / 255;
 
         if (avg > SILENCE_THRESHOLD) {
-          lastSoundTimeRef.current = Date.now();
-        } else if (Date.now() - lastSoundTimeRef.current > SILENCE_TIMEOUT_MS) {
-          // Silence for too long, auto-stop
+          lastSoundRef.current = Date.now();
+        } else if (Date.now() - lastSoundRef.current > SILENCE_TIMEOUT_MS) {
           stop();
         }
-      }, CHECK_INTERVAL_MS);
+      }, LEVEL_CHECK_MS);
     } catch (err) {
       console.warn('Mic access denied or failed:', err);
       setIsListening(false);
     }
-  }, [isSupported, transcribeAudio, stop]);
+  }, [isSupported, harvestAndTranscribe, stop]);
 
   const reset = useCallback(() => {
-    stop();
+    cleanup();
+    setIsListening(false);
     setTranscript('');
     setIsTranscribing(false);
-  }, [stop]);
+    segmentsRef.current = [];
+    chunksRef.current = [];
+    pendingTranscriptions.current = 0;
+    stoppingRef.current = false;
+  }, []);
 
   return { isSupported, isListening, transcript, isTranscribing, start, stop, reset };
 }
