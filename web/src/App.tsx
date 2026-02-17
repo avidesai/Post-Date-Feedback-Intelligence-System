@@ -63,19 +63,19 @@ async function findUserWithDates(users: User[]): Promise<{ user: User; dates: Da
           dateAt: d.dateAt,
         });
       }
-      if (withWomen.length >= 3) break;
+      if (withWomen.length >= 2) break;
     }
 
-    if (withWomen.length >= 3) {
-      return { user: candidate, dates: withWomen.slice(0, 3) };
+    if (withWomen.length >= 2) {
+      return { user: candidate, dates: withWomen.slice(0, 2) };
     }
   }
 
-  // Fallback: any user with 3+ dates
+  // Fallback: any user with 2+ dates
   for (const candidate of shuffled) {
     const dates: DateRecord[] = await api.getDatesForUser(candidate.id);
-    if (dates.length >= 3) {
-      const picked = dates.slice(0, 3).map(d => {
+    if (dates.length >= 2) {
+      const picked = dates.slice(0, 2).map(d => {
         const otherId = d.userAId === candidate.id ? d.userBId : d.userAId;
         const other = userMap.get(otherId);
         return {

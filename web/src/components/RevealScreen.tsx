@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApi } from '../hooks';
 import * as api from '../api';
 import type { PreferenceVector } from '../types';
-import { DIMENSIONS, DIMENSION_LABELS } from '../types';
+import { DIMENSIONS, DIMENSION_LABELS, DIMENSION_TIPS } from '../types';
 
 interface Props {
   userId: string;
@@ -69,7 +69,11 @@ export default function RevealScreen({ userId, statedPreferences, onContinue }: 
           return (
             <div key={dim} className="reveal-dim">
               <div className="reveal-dim-label">
-                <span>{DIMENSION_LABELS[dim]}</span>
+                <span className="tooltip-wrap">
+                  {DIMENSION_LABELS[dim]}
+                  <span className="tooltip-icon" tabIndex={0}>?</span>
+                  <span className="tooltip-text">{DIMENSION_TIPS[dim]}</span>
+                </span>
                 {gap > 0.12 && (
                   <span className="gap-indicator">
                     {(gap * 10).toFixed(1)} gap

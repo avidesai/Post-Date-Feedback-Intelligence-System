@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { PreferenceVector } from '../types';
-import { DIMENSIONS, DIMENSION_LABELS } from '../types';
+import { DIMENSIONS, DIMENSION_LABELS, DIMENSION_PREF_TIPS } from '../types';
 
 interface Props {
   onSubmit: (prefs: PreferenceVector) => void;
@@ -30,7 +30,13 @@ export default function PreferencesScreen({ onSubmit, loading, error }: Props) {
         {DIMENSIONS.map((dim, i) => (
           <div key={dim} className="pref-row">
             <div className="pref-header">
-              <span className="pref-label">{DIMENSION_LABELS[dim]}</span>
+              <span className="pref-label">
+                <span className="tooltip-wrap">
+                  {DIMENSION_LABELS[dim]}
+                  <span className="tooltip-icon" tabIndex={0}>?</span>
+                  <span className="tooltip-text">{DIMENSION_PREF_TIPS[dim]}</span>
+                </span>
+              </span>
               <span className="pref-value">{(prefs[i] * 10).toFixed(1)}</span>
             </div>
             <input

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import * as api from '../api';
-import { DIMENSIONS, DIMENSION_LABELS } from '../types';
+import { DIMENSIONS, DIMENSION_LABELS, DIMENSION_TIPS } from '../types';
 
 interface DateInfo {
   dateId: string;
@@ -116,7 +116,13 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
         {DIMENSIONS.map((dim, i) => (
           <div key={dim} className="pref-row">
             <div className="pref-header">
-              <span className="pref-label">{DIMENSION_LABELS[dim]}</span>
+              <span className="pref-label">
+                <span className="tooltip-wrap">
+                  {DIMENSION_LABELS[dim]}
+                  <span className="tooltip-icon" tabIndex={0}>?</span>
+                  <span className="tooltip-text">{DIMENSION_TIPS[dim]}</span>
+                </span>
+              </span>
               <span className="pref-value">{(scores[i] * 10).toFixed(1)}</span>
             </div>
             <input

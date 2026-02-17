@@ -965,6 +965,73 @@ textarea::placeholder {
   color: var(--text-secondary);
 }
 
+/* ═══ Tooltips ═══ */
+
+.tooltip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tooltip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: help;
+  flex-shrink: 0;
+  line-height: 1;
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+
+.tooltip-icon:hover,
+.tooltip-wrap:focus-within .tooltip-icon {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.tooltip-text {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  background: var(--text);
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  padding: 8px 12px;
+  border-radius: 8px;
+  width: max-content;
+  max-width: 260px;
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.tooltip-text::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 14px;
+  border: 5px solid transparent;
+  border-bottom-color: var(--text);
+}
+
+.tooltip-icon:hover + .tooltip-text,
+.tooltip-wrap:focus-within .tooltip-text {
+  display: block;
+}
+
 /* ═══ How It Works ═══ */
 
 .how-it-works-content {

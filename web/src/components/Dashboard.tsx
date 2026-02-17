@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useApi } from '../hooks';
 import * as api from '../api';
 import type { Feedback } from '../types';
-import { DIMENSIONS, DIMENSION_LABELS } from '../types';
+import { DIMENSIONS, DIMENSION_LABELS, DIMENSION_TIPS } from '../types';
 
 interface DateInfo {
   dateId: string;
@@ -131,7 +131,11 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
               return (
                 <div key={dim} className="dim-row">
                   <div className="dim-name">
-                    <span>{DIMENSION_LABELS[dim]}</span>
+                    <span className="tooltip-wrap">
+                      {DIMENSION_LABELS[dim]}
+                      <span className="tooltip-icon" tabIndex={0}>?</span>
+                      <span className="tooltip-text">{DIMENSION_TIPS[dim]}</span>
+                    </span>
                     {diff > 0.12 && (
                       <span className="gap-indicator">
                         {r > s ? '↑' : '↓'} {(diff * 10).toFixed(1)} gap

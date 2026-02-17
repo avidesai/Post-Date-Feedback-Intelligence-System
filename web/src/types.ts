@@ -10,6 +10,22 @@ export const DIMENSION_LABELS: Record<Dimension, string> = {
   values: 'Values',
 };
 
+export const DIMENSION_TIPS: Record<Dimension, string> = {
+  conversation: 'Did it flow naturally? Could you talk for hours or were there awkward silences?',
+  emotional: 'Did you feel understood and safe being yourself? Was there genuine warmth?',
+  interests: 'Do you have things in common? Shared hobbies, passions, how you spend your time?',
+  chemistry: 'Was there a spark? Physical attraction, flirting, that pull toward each other?',
+  values: 'Do you see the world similarly? Compatible on ambition, family, lifestyle?',
+};
+
+export const DIMENSION_PREF_TIPS: Record<Dimension, string> = {
+  conversation: 'How much does good conversation matter to you? Being able to talk easily and never run out of things to say.',
+  emotional: 'How important is it to feel emotionally safe and genuinely understood by your date?',
+  interests: 'How much do shared hobbies and passions matter? Or is it fine if you do your own things?',
+  chemistry: 'How important is physical attraction and that immediate spark?',
+  values: 'How much do you care about being aligned on the big stuff? Life goals, ambition, family.',
+};
+
 export interface User {
   id: string;
   name: string;
