@@ -76,6 +76,15 @@ export const extractPreferencesRequestSchema = z.object({
   })).min(1),
 });
 
+// what the LLM should return for editorial dating insights
+export const editorialInsightSchema = z.object({
+  insights: z.array(z.object({
+    dimension: z.string(),
+    heading: z.string().describe('Short 2-3 word editorial title like "The spark" or "Emotional depth"'),
+    quote: z.string().describe('2-3 sentence personalized insight about what this gap means for their dating life. Warm, non-judgmental, like a wise friend. Reference their actual words when available.'),
+  }))
+});
+
 export const simulationConfigSchema = z.object({
   userCount: z.number().int().min(4).max(100).default(20),
   iterationsPerRound: z.number().int().min(1).max(50).default(10),

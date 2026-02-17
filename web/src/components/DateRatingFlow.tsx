@@ -45,10 +45,9 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
   const [scores, setScores] = useState<[number, number, number, number, number]>([0.5, 0.5, 0.5, 0.5, 0.5]);
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [transitioning, setTransitioning] = useState(false);
+  const [finished, setFinished] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Warn before refresh/close during active rating
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -60,29 +59,20 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
   const date = dates[currentIndex];
   const isLast = currentIndex === dates.length - 1;
 
-  const resetForm = () => {
-    setOverall(0.5);
-    setScores([0.5, 0.5, 0.5, 0.5, 0.5]);
-    setText('');
-    setError(null);
-  };
-
   const advance = () => {
     if (isLast) {
-      // Clear saved progress on completion
+      setFinished(true);
       localStorage.removeItem(`rating_progress_${userId}`);
       onComplete();
     } else {
-      // Brief transition to cleanly unmount old ChatConversation before mounting new one
-      setTransitioning(true);
+      const nextIdx = currentIndex + 1;
+      setCurrentIndex(nextIdx);
+      saveRatingIndex(userId, nextIdx);
       setSubmitting(false);
-      resetForm();
-      setTimeout(() => {
-        const nextIdx = currentIndex + 1;
-        setCurrentIndex(nextIdx);
-        saveRatingIndex(userId, nextIdx);
-        setTransitioning(false);
-      }, 100);
+      setOverall(0.5);
+      setScores([0.5, 0.5, 0.5, 0.5, 0.5]);
+      setText('');
+      setError(null);
     }
   };
 
@@ -105,7 +95,6 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
       advance();
     } catch (e: any) {
       setError(e.message || 'Failed to submit');
-    } finally {
       setSubmitting(false);
     }
   };
@@ -114,7 +103,6 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
     setSubmitting(true);
     setError(null);
     try {
-      // Format transcript as natural text for the existing LLM extraction pipeline
       const rawText = transcript
         .map(t => `Q: ${t.question}\nA: ${t.answer}`)
         .join('\n\n');
@@ -131,6 +119,14 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
       setSubmitting(false);
     }
   };
+
+  if (finished) {
+    return (
+      <div className="rating-screen fade-up">
+        <div className="loading"><div className="spinner" /> Analyzing your results...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="rating-screen fade-up">
@@ -169,9 +165,7 @@ export default function DateRatingFlow({ userId, dates, onComplete }: Props) {
         </button>
       </div>
 
-      {transitioning ? (
-        <div style={{ minHeight: 200 }} />
-      ) : mode === 'chat' ? (
+      {mode === 'chat' ? (
         <>
           <ChatConversation
             key={date.dateId}

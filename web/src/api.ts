@@ -94,3 +94,10 @@ export const runSimulationRound = (config: { rounds: number }) =>
     method: 'POST',
     body: JSON.stringify(config),
   });
+
+// AI-generated editorial insights
+export const getEditorialInsights = (userId: string) =>
+  request<{ insights: { dimension: string; heading: string; quote: string }[] }>(
+    `/api/insights/${userId}/editorial`,
+    { method: 'POST' }
+  );

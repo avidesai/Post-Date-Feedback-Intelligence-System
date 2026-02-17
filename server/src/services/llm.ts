@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { config } from '../config';
-import { extractedFeedbackSchema, extractedPreferencesSchema } from '../schemas';
+import { extractedFeedbackSchema, extractedPreferencesSchema, editorialInsightSchema } from '../schemas';
 import type { ExtractedFeedback, PreferenceVector } from '../types';
 
 let client: OpenAI | null = null;
@@ -193,4 +193,81 @@ function generateFallbackText(scores: { conversation: number; emotional: number;
   }
 
   return parts.join(' ');
+}
+
+const DIMENSION_NAMES = ['conversation', 'emotional', 'interests', 'chemistry', 'values'] as const;
+
+const EDITORIAL_SYSTEM_PROMPT = `You are a warm, perceptive dating coach analyzing someone's "say-do gap" — the difference between what they say they want in a partner and what their actual date feedback reveals they respond to.
+
+You'll be given:
+- Dimensions where there's a meaningful gap between stated and revealed preferences
+- The user's raw feedback texts from their dates
+
+For each dimension provided, generate an insight that:
+1. Has a short 2-3 word editorial heading (like "The spark", "Emotional depth", "Hidden priorities")
+2. Contains a 2-3 sentence personalized quote explaining what this gap means for their dating life
+3. Is warm, non-judgmental, and sounds like a wise friend — not clinical or preachy
+4. References the user's actual words from their feedback when possible
+5. Helps them understand something true about themselves they might not have noticed
+
+If their stated preference is higher than revealed, they might think something matters more than it actually does in practice.
+If their revealed preference is higher than stated, they might be undervaluing something that actually drives their satisfaction.
+
+Never use em dashes. Keep it conversational and genuine.`;
+
+export async function generateEditorialInsights(
+  statedPreferences: number[],
+  revealedPreferences: number[],
+  feedbackTexts: string[]
+): Promise<{ dimension: string; heading: string; quote: string }[] | null> {
+  if (!config.openaiApiKey) {
+    console.log('No OpenAI API key, skipping editorial insights generation');
+    return null;
+  }
+
+  // find dimensions where |stated - revealed| > 0.12
+  const gapDimensions: { name: string; stated: number; revealed: number; gap: number }[] = [];
+  for (let i = 0; i < DIMENSION_NAMES.length; i++) {
+    const gap = Math.abs(statedPreferences[i] - revealedPreferences[i]);
+    if (gap > 0.12) {
+      gapDimensions.push({
+        name: DIMENSION_NAMES[i],
+        stated: statedPreferences[i],
+        revealed: revealedPreferences[i],
+        gap,
+      });
+    }
+  }
+
+  if (gapDimensions.length === 0) {
+    return [];
+  }
+
+  const openai = getClient();
+
+  const dimensionDetails = gapDimensions.map(d => {
+    const direction = d.stated > d.revealed
+      ? `They say ${d.name} matters (${d.stated.toFixed(2)}) but their feedback suggests it matters less (${d.revealed.toFixed(2)})`
+      : `They underrate ${d.name} (stated ${d.stated.toFixed(2)}) but their feedback shows it actually matters a lot to them (${d.revealed.toFixed(2)})`;
+    return `- ${d.name}: ${direction} (gap: ${d.gap.toFixed(2)})`;
+  }).join('\n');
+
+  const feedbackSection = feedbackTexts.length > 0
+    ? `\n\nHere are their actual post-date feedback texts:\n${feedbackTexts.map((t, i) => `${i + 1}. "${t}"`).join('\n')}`
+    : '';
+
+  const userMessage = `Analyze these say-do gaps and generate one insight per dimension:\n\n${dimensionDetails}${feedbackSection}`;
+
+  const completion = await openai.beta.chat.completions.parse({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: EDITORIAL_SYSTEM_PROMPT },
+      { role: 'user', content: userMessage },
+    ],
+    response_format: zodResponseFormat(editorialInsightSchema, 'editorial_insights'),
+    temperature: 0.7,
+  });
+
+  const parsed = completion.choices[0]?.message?.parsed;
+  return parsed?.insights || null;
 }

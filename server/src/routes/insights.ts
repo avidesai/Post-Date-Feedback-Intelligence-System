@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getPreferenceDrift } from '../services/divergence';
+import { generateEditorialInsights } from '../services/llm';
 import * as models from '../db/models';
 
 const router = Router();
@@ -55,6 +56,33 @@ router.get('/:userId/summary', (req, res) => {
     divergence: drift?.currentDivergence || null,
     insights: drift?.currentDivergence.insights || [],
   });
+});
+
+// generate editorial dating insights using LLM analysis of say-do gap
+router.post('/:userId/editorial', async (req, res) => {
+  try {
+    const user = models.getUser(req.params.userId);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    const feedbackGiven = models.getFeedbackByUser(req.params.userId);
+    const feedbackTexts = feedbackGiven
+      .map(f => f.rawText)
+      .filter((text): text is string => text != null && text.length > 0);
+
+    const insights = await generateEditorialInsights(
+      user.statedPreferences,
+      user.revealedPreferences,
+      feedbackTexts
+    );
+
+    res.json({ insights: insights || [] });
+  } catch (error) {
+    console.error('Error generating editorial insights:', error);
+    res.json({ insights: [] });
+  }
 });
 
 export default router;
