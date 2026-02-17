@@ -143,8 +143,8 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
 
         {/* Insights */}
         {(insights.length > 0 || biggestGapValue > 0.1) && (
-          <div className="card">
-            <div className="card-title">What we <em>found</em></div>
+          <>
+            <div className="section-label">What we found</div>
             {insights.map((insight, i) => (
               <div
                 key={i}
@@ -159,7 +159,7 @@ export default function Dashboard({ userId, dates, onStartOver }: Props) {
                 difference between what you said and how you actually rated.
               </div>
             )}
-          </div>
+          </>
         )}
 
         {/* Your Dates */}
